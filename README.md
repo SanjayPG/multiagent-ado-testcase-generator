@@ -7,6 +7,9 @@ Reads Epics + PBIs directly from ADO, generates structured test cases (Positive,
 
 ---
 
+<img width="1014" height="648" alt="flow1" src="https://github.com/user-attachments/assets/16d3250a-2ac3-4256-b94f-0958e60eb278" />
+
+
 ## Architecture
 
 ```
