@@ -1,0 +1,9 @@
+# Secrets — never commit
+.env
+.env.*
+.claude/settings.local.json
+
+# Generated output
+output/*.csv
+
+node_modules/

@@ -1,0 +1,19 @@
+{
+    "mcpServers":  {
+                       "ado":  {
+                                   "command":  "npx",
+                                   "args":  [
+                                                "-y",
+                                                "--package=@azure-devops/mcp",
+                                                "mcp-server-azuredevops",
+                                                "${ADO_ORG}",
+                                                "--authentication",
+                                                "pat"
+                                            ],
+                                   "env":  {
+                                               "PERSONAL_ACCESS_TOKEN":  "${ADO_PAT_B64}",
+                                               "ado_mcp_project":  "${ADO_PROJECT}"
+                                           }
+                               }
+                   }
+}

@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ado__wit_work_item",
+      "mcp__ado__wit_work_item_write",
+      "mcp__ado__testplan_test_case_write",
+      "mcp__ado__wit_query",
+      "Bash",
+      "Read",
+      "Write",
+      "Agent"
+    ]
+  }
+}
