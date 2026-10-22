@@ -170,34 +170,6 @@ You will be asked to confirm before anything is written.
 
 ---
 
-## Web UI (optional)
-
-The slash commands above keep working exactly as before. `ui/` is an optional local web page that
-drives the *same* commands (`claude -p "/generate-test-cases ..."`), so there is one code path:
-
-```bash
-cd ui
-pnpm install
-pnpm dev          # http://127.0.0.1:3210
-```
-
-Set `ADO_PAT_B64`, `ADO_ORG` and `ADO_PROJECT` in the terminal that starts it (see Setup). The page lets
-you enter PBI ids and context flags, watch each step, review and filter the generated test cases,
-download the ADO CSV, and push to Azure DevOps.
-
-- **Local only:** the server binds to `127.0.0.1`, rejects other Host/Origin headers, and never sends the
-  PAT to the browser.
-- **Edited the CSV?** Download it, fix it in Excel, and upload it back on the review screen. The UI shows
-  what changed (added / removed / changed test cases) and then pushes **your file instead of the original**;
-  "Remove upload" goes back to the original. Save from Excel as "CSV UTF-8 (Comma delimited)", and keep each
-  title starting with `[TC-<PBI id>-...]` (that is how a test case is linked to its PBI). Pushing only
-  creates work items: a title you changed after an earlier push is created again, not updated.
-- **Pushing writes to Azure DevOps.** The UI asks you to type the project name first, and the server
-  re-checks the confirmation and the test case count before calling `/push-test-cases ... --yes`.
-  In a terminal, `/push-test-cases` still asks "Confirm? (yes/no)" unless you pass `--yes` yourself.
-- **Tests:** `pnpm test` (unit + API, no network) and `pnpm e2e` (Playwright against a fake `claude`
-  that replays a recorded run — no Azure DevOps calls, no tokens).
-
 ## Output CSV format
 
 The file matches ADO's native Test Case export, so it imports directly. One row per step; the
