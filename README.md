@@ -1,7 +1,7 @@
 # ADO TC Generator Agent
 
 An AI-powered, multi-agent test case generator for Azure DevOps.
-Built with Claude Code, MCP, and parallel subagents.
+Built with Claude Code, MCP, and parallel subagents. https://youtube.com/playlist?list=PLTTtCOmLVLIw&si=Kxdqpx-GdUd9uFsU
 
 Reads Epics + PBIs directly from ADO, generates structured test cases (Positive, Negative, Edge Case, Performance, Boundary), exports to CSV for human review, then pushes back to ADO with PBI linking on your command.
 
@@ -243,5 +243,5 @@ tc-generator/
 
 ## YouTube series
 
-This project is part of the **SDET Sanjay** YouTube channel series on AI-powered test automation.
+This project is part of the **SDET Sanjay** Claude playlist https://youtube.com/playlist?list=PLTTtCOmLVLIw&si=Kxdqpx-GdUd9uFsU YouTube channel series on AI-powered test automation.
 Subscribe for walkthroughs, architecture deep-dives, and live demos.
