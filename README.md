@@ -33,6 +33,8 @@ spawned explicitly by name from `CLAUDE.md` — never invoked via auto-delegatio
 
 - [Claude Code](https://claude.ai/code) installed (`npm install -g @anthropic-ai/claude-code`)
 - Node.js 18+ (the ADO MCP server runs through `npx`)
+- For the optional [Web UI](ui/QUICKSTART.md) only: Node.js 20+ and [pnpm](https://pnpm.io/installation)
+  (`npm install -g pnpm`, or `corepack enable`). Check with `pnpm --version`
 - An Azure DevOps account with access to the project, and a PAT (steps below) with **Work Items (Read & Write)** and **Test Management (Read & Write)** scopes
 
 ---

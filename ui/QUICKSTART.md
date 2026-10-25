@@ -9,7 +9,8 @@ test cases, then push them to Azure DevOps. It drives the same slash commands as
 
 | Need | Notes |
 |---|---|
-| Node.js 18+ and pnpm | The page runs on Node; the ADO MCP server runs through `npx` |
+| Node.js 20+ | The page and its tests run on Node; the ADO MCP server runs through `npx`. Check with `node --version` |
+| [pnpm](https://pnpm.io/installation) | Every command here uses it. Install with `npm install -g pnpm` (or `corepack enable`), then check with `pnpm --version` |
 | [Claude Code](https://claude.ai/code), installed and signed in | The page starts it in the background. If `claude` does not work in your terminal, neither will the page |
 | Azure DevOps access + a PAT | Scopes: **Work Items** (Read & write) and **Test Management** (Read & write) |
 | Three environment variables | See step 2 |
