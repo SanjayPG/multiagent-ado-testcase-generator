@@ -137,3 +137,25 @@ pnpm e2e     # Playwright against a fake `claude` that replays a recorded run (n
 | First run in a new clone fails or hangs on the ADO step | The folder or the `ado` MCP server was never approved; do step 3 in interactive `claude` |
 | PBI fetch fails | `ado` MCP server did not connect (check the PAT scopes, expiry and `ADO_ORG`) |
 | Port already in use | Set `UI_PORT` to a free port |
+
+## When something breaks: logs
+
+When a run fails, the red box at the top says what is probably wrong and what to try. If it is not enough:
+
+- **Download full log** (in the red box, in the **Full log** section while a run goes, and under the review) is everything the run printed, with your token removed.
+- **Download diagnostics** is one text file for asking someone else for help: the run's status and error, the steps, your settings (set or `MISSING`, never the values), and the full log. Read it before you share it, because it can contain project and work item details.
+- **Claude's notes** are only Claude's own commentary. The full log is the place to look.
+
+The page keeps each run's files in `ui/.data/runs/<run id>/`:
+
+| File | What it holds |
+|---|---|
+| `run.log` | The raw output of the run (up to 5 MB) |
+| `events.jsonl` | The steps and notes the page shows |
+| `meta.json` | Status, error, and the plain-language cause when it is one we recognise |
+| `tc.csv` | The generated CSV |
+
+Two more logs live outside the page, and they are the ones to read when Azure DevOps will not connect:
+
+- Claude Code's own transcript of every run: `~/.claude/projects/<this project's folder>/<session>.jsonl`.
+- The Azure DevOps server's connection log: `%LOCALAPPDATA%\claude-cli-nodejs\Cache\<this project's folder>\mcp-logs-ado\`. It shows each connection attempt and why it failed.
