@@ -57,19 +57,22 @@ h1 .accent { color: var(--brand-orange); }
 .node { margin: 0; width: 90px; }
 .node img { display: block; width: 64px; height: 64px; margin: 0 auto; object-fit: contain; background: #fff; border-radius: 14px; }
 .node figcaption { margin-top: 4px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
-.link { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 110px; padding-top: 4px; }
-.link .tag { padding: 1px 10px; border-radius: 999px; border: 1px solid var(--brand-orange); color: var(--brand-orange); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; }
+/* Two lanes: test cases go out to Azure DevOps, PBIs come back. The dashes move in each lane's direction. */
+.link { display: flex; flex-direction: column; align-items: stretch; gap: 3px; width: 150px; }
+.lane-label { display: block; color: #ffd2b0; font-size: 0.72rem; letter-spacing: 0.04em; line-height: 1.2; }
 .link .line {
-  position: relative; width: 100%; height: 2px;
+  display: block; position: relative; height: 2px; margin: 4px 6px;
   background: repeating-linear-gradient(90deg, var(--brand-orange) 0 8px, transparent 8px 14px);
   background-size: 14px 2px;
-  animation: flow-dash 0.9s linear infinite;
 }
-/* Both heads: the tool reads PBIs from Azure DevOps and pushes test cases back. */
 .link .line::before, .link .line::after { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
-.link .line::after { right: -2px; border-left: 8px solid var(--brand-orange); }
-.link .line::before { left: -2px; border-right: 8px solid var(--brand-orange); }
-@keyframes flow-dash { to { background-position: 14px 0; } }
+.lane-out .line { animation: flow-out 0.9s linear infinite; }
+.lane-out .line::after { right: -6px; border-left: 8px solid var(--brand-orange); }
+.lane-in .line { animation: flow-in 0.9s linear infinite; }
+.lane-in .line::before { left: -6px; border-right: 8px solid var(--brand-orange); }
+.link .via { margin-top: 5px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
+@keyframes flow-out { to { background-position: 14px 0; } }
+@keyframes flow-in { to { background-position: -14px 0; } }
 @media (prefers-reduced-motion: reduce) { .link .line { animation: none; } }
 .page-header strong { padding: 2px 10px; border-radius: 999px; background: rgba(255, 106, 0, 0.18); color: #ffd2b0; }
 h2 { font-size: 1.15rem; margin: 28px 0 8px; }
