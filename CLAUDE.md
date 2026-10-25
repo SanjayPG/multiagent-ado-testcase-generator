@@ -40,7 +40,9 @@ Spawn the `ado-fetcher` subagent via the Task tool, by name, with:
 { "pbi_ids": [123, 456, ...], "project": "<ADO project from Step 1>" }
 ```
 Wait for response. Expected: JSON array of slim PBI objects, each with its `work_item_type`.
-If fetch fails for any PBI, log the failure and continue with the rest.
+If fetch fails for any PBI, log the failure and continue with the rest. Say which kind it was:
+`[SKIP] PBI-{id}: not found in project {project}` when `fetch_error_reason` is `not_found` (the id does not exist
+there), otherwise `[SKIP] PBI-{id}: fetch failed`.
 
 **Keep only PBIs.** The ids the user typed can point at any work item, so check each returned
 `work_item_type` before going on. These are the PBI types, one per Azure DevOps process template:
@@ -144,7 +146,8 @@ Wait for response. Print final summary: created N, linked N, failed: [list].
 ---
 
 ## Error handling
-- ADO fetch failure for a PBI: log `[SKIP] PBI-{id}: fetch failed` and continue
+- PBI id that does not exist in the project: log `[SKIP] PBI-{id}: not found in project {project}` and continue
+- ADO fetch failure for a PBI (the call failed): log `[SKIP] PBI-{id}: fetch failed` and continue
 - Work item that is not a PBI (a Bug, Task, Epic, …): log `[SKIP] PBI-{id}: {work_item_type} is not a PBI` and continue
 - Every id skipped: stop, list the ids and reasons, and write no CSV
 - Subagent returns empty array: log `[WARN] PBI-{id}: no TCs generated` and continue

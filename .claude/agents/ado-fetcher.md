@@ -77,7 +77,9 @@ The values above are illustrative. Fill every field from the real work item data
 never reuse the example text.
 
 If a PBI has no parent Epic, set `parent_epic_id: null` and `parent_epic_title: "Unknown"`.
-If a PBI fetch fails, include it with all fields set to `null` and add `"fetch_error": true`.
+If a PBI fetch fails, include it with all fields set to `null` and add `"fetch_error": true`, plus
+`"fetch_error_reason"`: `"not_found"` when ADO answered but had no item for that id (it is missing from the
+batch response), or `"error"` when the call itself failed or timed out.
 `work_item_type` is the value ADO reports in `System.WorkItemType`, copied exactly. Return every
 item you were asked for, whatever its type: the coordinator decides which types are PBIs, not me.
 
