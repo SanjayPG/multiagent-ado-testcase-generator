@@ -24,19 +24,22 @@
       <div id="env-banner" class="banner banner-warning" role="alert" data-testid="env-banner" hidden></div>
       <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
 
-      <section aria-labelledby="generate-heading">
+      <section class="card" aria-labelledby="generate-heading">
         <h2 id="generate-heading">1. Generate</h2>
         <form id="generate-form" autocomplete="off">
           <label for="pbi-input">PBI ids <span class="hint">(comma separated, e.g. 2, 3)</span></label>
-          <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" required />
+          <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" placeholder="e.g. 2, 3" required />
 
           <fieldset class="context">
             <legend>Extra context <span class="hint">(optional)</span></legend>
-            <p class="hint">
-              A design document or a list of regression scripts. It is summarised to about 500 words and given to
-              every test-case writer. A file or URL you choose here is used for this run only; the files in your
-              repo's context/ folder are never changed.
-            </p>
+            <p class="hint">A design document or a list of regression scripts, summarised for the test-case writers.</p>
+            <details class="more">
+              <summary>More</summary>
+              <p class="hint">
+                It is summarised to about 500 words and given to every test-case writer. A file or URL you choose
+                here is used for this run only; the files in your repo's context/ folder are never changed.
+              </p>
+            </details>
             <div id="context-cards" data-testid="context-cards"></div>
           </fieldset>
 

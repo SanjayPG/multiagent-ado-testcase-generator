@@ -293,7 +293,7 @@ const renderTestCase = (testCase: TestCase): HTMLElement => {
       h("span", { class: "tc-title" }, testCase.title),
       h("span", { class: "badge", "data-type": testCase.testType }, testCase.testType),
       h("span", { class: "badge" }, testCase.pbiId === null ? "PBI ?" : `PBI ${testCase.pbiId}`),
-      h("span", { class: "badge" }, `P${testCase.priority}`),
+      h("span", { class: "badge", "data-priority": String(testCase.priority) }, `P${testCase.priority}`),
       h("span", { class: "badge" }, `${testCase.steps.length} ${testCase.steps.length === 1 ? "step" : "steps"}`),
     ),
     h("div", { class: "tc-body" }, details, table),
@@ -508,7 +508,11 @@ const refreshHistory = async (): Promise<void> => {
       return item;
     }),
   );
-  if (runs.length === 0) historyList.append(h("li", { class: "hint" }, "No runs yet."));
+  if (runs.length === 0) {
+    historyList.append(
+      h("li", { class: "hint empty" }, h("strong", {}, "No runs yet."), h("span", {}, "Enter PBI ids above and click Generate test cases to start.")),
+    );
+  }
 };
 
 // ---------- generate ----------
