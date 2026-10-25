@@ -23,6 +23,7 @@ import {
   type RunMeta,
   type StoredEvent,
 } from "./store.js";
+import { parseSkipped } from "./skipped.js";
 import { parsePushSummary, redactSecrets } from "./summary.js";
 import { buildGeneratePrompt, buildPushPrompt } from "./validate.js";
 
@@ -292,7 +293,9 @@ export const startGenerate = async (
       if (!produced) throw new Error("The run finished but no CSV file was found in output/.");
       await saveCsvCopy(id, produced);
       const testCases = parseTestCases(await readFile(csvPath(id), "utf8"));
-      return { status: "done", hasCsv: true, testCaseCount: testCases.length };
+      // Ids the pipeline left out (for example a Bug), so the review can say so instead of hiding it.
+      const skipped = parseSkipped(resultText);
+      return { status: "done", hasCsv: true, testCaseCount: testCases.length, ...(skipped.length > 0 ? { skipped } : {}) };
     },
   });
 };

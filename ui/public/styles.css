@@ -134,6 +134,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .banner { margin: 16px 0 0; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border); }
 .banner-warning { background: var(--warn-bg); }
+#skipped { white-space: pre-wrap; margin: 0 0 12px; }
 .banner-error { background: var(--err-bg); white-space: pre-wrap; }
 
 .progress-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }

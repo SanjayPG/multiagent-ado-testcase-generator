@@ -16,6 +16,17 @@ const RULES: Rule[] = [
     },
   },
   {
+    pattern: /\bis not a PBI\b|\bnot a (PBI|product backlog item)\b/i,
+    hint: {
+      title: "That work item is not a PBI",
+      steps: [
+        "Use the ids of PBIs: Product Backlog Item, User Story, Requirement or Issue, depending on your project's process.",
+        "Open the item in Azure DevOps and check its type. Bugs, Tasks, Features and Epics are skipped.",
+        "When you type several ids, the PBIs among them still get test cases; only the others are skipped.",
+      ],
+    },
+  },
+  {
     pattern: /CONNECT_TIMEOUT|timed out when connecting|MCP server .{0,60}(timed out|failed to connect|connection)|\bhad no tools\b|mcp__ado__\w+ .{0,40}(not available|unavailable)/i,
     hint: {
       title: "Couldn't connect to Azure DevOps",

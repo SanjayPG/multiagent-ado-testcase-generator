@@ -149,6 +149,30 @@ describe("the diagnostics file", () => {
   });
 });
 
+describe("work items that are not PBIs", () => {
+  it("finishes for the PBIs and reports the Bug it left out", async () => {
+    const runId = await startRun([2, 97]);
+    const body = await waitForStatus(runId, ["done"]);
+    expect(body.meta.skipped).toEqual([{ id: 97, reason: "Bug is not a PBI" }]);
+    expect(body.testCases.length).toBeGreaterThan(0);
+  });
+
+  it("reports nothing skipped for an ordinary run", async () => {
+    const runId = await startRun([2, 3]);
+    const body = await waitForStatus(runId, ["done"]);
+    expect(body.meta.skipped).toBeUndefined();
+  });
+
+  it("fails with a plain explanation when every id was a Bug", async () => {
+    rmSync(path.join(sandbox, "output"), { recursive: true, force: true });
+    const runId = await startRun([98]);
+    const { meta } = await waitForStatus(runId, ["failed"]);
+    expect(meta.errorHint.title).toBe("That work item is not a PBI");
+    expect(meta.resultText).toContain("[SKIP] PBI-98: Bug is not a PBI");
+    expect(meta.hasCsv).toBeUndefined();
+  });
+});
+
 describe("a failure caused by the ado server", () => {
   it("explains the cause in plain words, keeps the raw reason, and records it in the log", async () => {
     // The app accepts a CSV written in the last two seconds, so clear the ones earlier tests left behind.

@@ -1,4 +1,6 @@
+import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { GeneratorPage } from "./pages/GeneratorPage";
 
@@ -253,6 +255,26 @@ test.describe("test case generator UI", () => {
 
     expect(await generator.textOf(generator.errorLogLink)).toContain("CONNECT_TIMEOUT");
     expect(await generator.textOf(generator.errorDiagnosticsLink)).toContain("likely cause: Couldn't connect to Azure DevOps");
+  });
+
+  test("says which ids were skipped as not PBIs, and shows nothing when none were", async () => {
+    await generator.generateAndWaitForResults("2, 97");
+    await expect(generator.skipped).toBeVisible();
+    await expect(generator.skipped).toContainText("Skipped PBI 97: Bug is not a PBI.");
+    expect(await generator.testCases.count()).toBeGreaterThan(20);
+
+    await generator.generateAndWaitForResults("2, 3");
+    await expect(generator.skipped).toBeHidden();
+  });
+
+  test("explains that a Bug is not a PBI when every id was one", async () => {
+    // The app accepts a CSV written in the last two seconds, so clear the one the previous test left behind.
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true });
+    await generator.generate("98");
+
+    await expect(generator.errorTitle).toHaveText("That work item is not a PBI", { timeout: 20_000 });
+    await expect(generator.errorSteps).toContainText("Product Backlog Item");
+    await expect(generator.testCases).toHaveCount(0);
   });
 
   test("keeps the line breaks and the table in Claude's notes", async ({ page }) => {

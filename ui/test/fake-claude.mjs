@@ -9,7 +9,8 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const prompt = args[args.indexOf("-p") + 1] ?? "";
-const mode = process.env.FAKE_CLAUDE_MODE ?? (/--pbis\s+99\b/.test(prompt) ? "mcp-timeout" : "ok");
+const mode =
+  process.env.FAKE_CLAUDE_MODE ?? (/--pbis\s+99\b/.test(prompt) ? "mcp-timeout" : /--pbis\s+98\b/.test(prompt) ? "not-a-pbi" : "ok");
 const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 20);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -33,6 +34,16 @@ if (mode === "leak") {
   emit({ type: "result", subtype: "error", is_error: true, duration_ms: 1, total_cost_usd: 0, result: `failed with ${token}` });
   await sleep(100);
   process.exit(1);
+}
+
+if (mode === "not-a-pbi") {
+  // Every id was a Bug (or similar): the coordinator stops and writes no CSV.
+  const text = "I did not generate any test cases.\n[SKIP] PBI-98: Bug is not a PBI\nNo PBIs were left, so I stopped and wrote no CSV.";
+  emit({ type: "system", subtype: "init", session_id: "fake" });
+  emit({ type: "assistant", message: { content: [{ type: "text", text }] } });
+  emit({ type: "result", subtype: "success", is_error: false, duration_ms: 4000, total_cost_usd: 0.01, result: text });
+  await sleep(100);
+  process.exit(0);
 }
 
 if (mode === "mcp-timeout") {
@@ -71,6 +82,17 @@ if (prompt.startsWith("/generate-test-cases")) {
   for (const line of lines) {
     process.stdout.write(`${line}\n`);
     await sleep(delay);
+  }
+  // A mixed request such as "2,97": the real pipeline finishes for the PBIs and reports the Bug it left out.
+  if (/--pbis\s+[\d,]*\b97\b/.test(prompt)) {
+    emit({
+      type: "result",
+      subtype: "success",
+      is_error: false,
+      duration_ms: 1000,
+      total_cost_usd: 0.1,
+      result: "Generated 24 test cases and wrote them to `output/tc_2026-10-18.csv`.\n\n[SKIP] PBI-97: Bug is not a PBI",
+    });
   }
 } else if (prompt.startsWith("/push-test-cases")) {
   emit({ type: "system", subtype: "init", session_id: "fake" });

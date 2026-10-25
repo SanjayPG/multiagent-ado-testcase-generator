@@ -40,6 +40,7 @@ export class GeneratorPage {
   readonly logDownload: Locator;
   readonly diagnosticsDownload: Locator;
   readonly resultsLogLink: Locator;
+  readonly skipped: Locator;
   readonly errorTitle: Locator;
   readonly errorSteps: Locator;
   readonly errorRaw: Locator;
@@ -83,6 +84,7 @@ export class GeneratorPage {
     this.logDownload = page.getByTestId("log-download");
     this.diagnosticsDownload = page.getByTestId("diagnostics-download");
     this.resultsLogLink = page.getByTestId("results-log-link");
+    this.skipped = page.getByTestId("skipped");
     this.errorTitle = page.getByTestId("error-title");
     this.errorSteps = page.getByTestId("error-steps");
     this.errorRaw = page.getByTestId("error-raw");

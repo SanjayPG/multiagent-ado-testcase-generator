@@ -6,6 +6,7 @@ import type { ContextUsed } from "./context.js";
 import type { ChangeSummary } from "./diff.js";
 import type { RunEvent } from "./events.js";
 import type { ErrorHint } from "./failure.js";
+import type { SkippedItem } from "./skipped.js";
 import { isRunId } from "./validate.js";
 
 export type RunKind = "generate" | "push";
@@ -34,6 +35,7 @@ export type RunMeta = {
   resultText?: string;
   errorMessage?: string;
   errorHint?: ErrorHint; // a plain-language cause and next steps, when the failure is one we recognise
+  skipped?: SkippedItem[]; // ids the pipeline left out, with the reason (for example a Bug)
   hasCsv?: boolean;
   testCaseCount?: number;
   durationMs?: number | null;

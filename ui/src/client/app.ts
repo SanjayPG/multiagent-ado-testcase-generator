@@ -57,6 +57,7 @@ type RunMeta = {
   resultText?: string;
   errorMessage?: string;
   errorHint?: { title: string; steps: string[] };
+  skipped?: Array<{ id: number; reason: string }>;
   hasCsv?: boolean;
   testCaseCount?: number;
   durationMs?: number | null;
@@ -127,6 +128,7 @@ const form = byId<HTMLFormElement>("generate-form");
 const pbiInput = byId<HTMLInputElement>("pbi-input");
 const contextCardsBox = byId("context-cards");
 const contextUsedText = byId("context-used");
+const skippedBanner = byId("skipped");
 const generateButton = byId<HTMLButtonElement>("generate-button");
 const cancelButton = byId<HTMLButtonElement>("cancel-button");
 const progressSection = byId("progress-section");
@@ -503,6 +505,10 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
     .join(" · ");
   const extras = [formatDuration(meta.durationMs), formatCost(meta.costUsd)].filter(Boolean).join(" · ");
   contextUsedText.textContent = describeContextUsed(meta.context ?? []);
+  // Ids that were typed but left out (for example a Bug): say so, so nobody thinks they were covered.
+  const skipped = meta.skipped ?? [];
+  skippedBanner.hidden = skipped.length === 0;
+  skippedBanner.textContent = skipped.map((item) => `Skipped PBI ${item.id}: ${item.reason}.`).join("\n");
   const heading = source === "uploaded" ? `Your uploaded file: ${testCases.length} test cases` : `${testCases.length} test cases`;
   summaryText.textContent = [heading, `${steps} steps`, byType, extras].filter(Boolean).join(" — ");
 
