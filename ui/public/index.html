@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Test Case Generator</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="page-header">
+      <h1>Test Case Generator</h1>
+      <p class="subtitle">
+        Azure DevOps project: <strong id="project-name" data-testid="project-name">—</strong>
+      </p>
+    </header>
+
+    <main>
+      <div id="env-banner" class="banner banner-warning" role="alert" data-testid="env-banner" hidden></div>
+      <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
+
+      <section aria-labelledby="generate-heading">
+        <h2 id="generate-heading">1. Generate</h2>
+        <form id="generate-form" autocomplete="off">
+          <label for="pbi-input">PBI ids <span class="hint">(comma separated, e.g. 2, 3)</span></label>
+          <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" required />
+
+          <fieldset class="context">
+            <legend>Extra context <span class="hint">(optional)</span></legend>
+            <p class="hint">
+              A design document or a list of regression scripts. It is summarised to about 500 words and given to
+              every test-case writer. A file or URL you choose here is used for this run only; the files in your
+              repo's context/ folder are never changed.
+            </p>
+            <div id="context-cards" data-testid="context-cards"></div>
+          </fieldset>
+
+          <div class="actions">
+            <button type="submit" id="generate-button" data-testid="generate-button">Generate test cases</button>
+            <button type="button" id="cancel-button" data-testid="cancel-button" class="secondary" hidden>Cancel run</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="progress-section" data-testid="progress-section" aria-labelledby="progress-heading" hidden>
+        <h2 id="progress-heading">Progress</h2>
+        <div class="progress-row">
+          <progress id="progress-bar" data-testid="progress-bar" aria-label="Run progress" max="1"></progress>
+          <span id="progress-label" class="progress-label" data-testid="progress-label"></span>
+        </div>
+        <ol id="steps" class="steps" aria-live="polite" data-testid="steps"></ol>
+        <details>
+          <summary>Run log</summary>
+          <ol id="notes" class="notes"></ol>
+        </details>
+      </section>
+
+      <section id="results-section" aria-labelledby="results-heading" hidden>
+        <h2 id="results-heading">2. Review</h2>
+        <p id="summary" class="summary" data-testid="summary"></p>
+        <p id="context-used" class="summary" data-testid="context-used"></p>
+
+        <div class="filters">
+          <label>Type
+            <select id="filter-type" data-testid="filter-type"><option value="">All</option></select>
+          </label>
+          <label>PBI
+            <select id="filter-pbi" data-testid="filter-pbi"><option value="">All</option></select>
+          </label>
+          <label>Search
+            <input id="filter-text" data-testid="filter-text" type="search" placeholder="title or step text" />
+          </label>
+        </div>
+
+        <div id="testcases" class="testcases" data-testid="testcases"></div>
+
+        <div class="upload-box">
+          <label for="upload-input">Edited the file in Excel? Upload it, and it is pushed instead of the original.</label>
+          <input id="upload-input" data-testid="upload-input" type="file" accept=".csv,text/csv" />
+        </div>
+        <div id="upload-panel" class="upload-panel" data-testid="upload-panel" hidden>
+          <p id="upload-text" data-testid="upload-text"></p>
+          <ul id="upload-warnings" class="upload-warnings" data-testid="upload-warnings"></ul>
+          <details>
+            <summary>What changed</summary>
+            <div id="upload-changes" data-testid="upload-changes"></div>
+          </details>
+          <button type="button" id="remove-upload-button" data-testid="remove-upload-button" class="secondary">Remove upload (use the original)</button>
+        </div>
+
+        <div class="actions">
+          <a id="download-link" data-testid="download-link" class="button" href="#" download>Download CSV</a>
+          <button type="button" id="push-button" data-testid="push-button" class="danger">Push to Azure DevOps…</button>
+        </div>
+      </section>
+
+      <section id="push-section" aria-labelledby="push-heading" hidden>
+        <h2 id="push-heading">3. Push result</h2>
+        <div class="progress-row">
+          <progress id="push-progress-bar" data-testid="push-progress-bar" aria-label="Push progress" max="1"></progress>
+          <span id="push-progress-label" class="progress-label" data-testid="push-progress-label"></span>
+        </div>
+        <ol id="push-steps" class="steps" aria-live="polite" data-testid="push-steps"></ol>
+        <p id="push-summary" class="summary" data-testid="push-summary"></p>
+        <pre id="push-raw" class="raw" data-testid="push-raw"></pre>
+      </section>
+
+      <section aria-labelledby="history-heading">
+        <h2 id="history-heading">Recent runs</h2>
+        <ul id="history" class="history" data-testid="history"></ul>
+      </section>
+    </main>
+
+    <dialog id="push-dialog" data-testid="push-dialog" aria-labelledby="push-dialog-title">
+      <form id="push-form" method="dialog">
+        <h2 id="push-dialog-title">Push to Azure DevOps?</h2>
+        <p id="push-dialog-text" data-testid="push-dialog-text"></p>
+        <label for="push-confirm-input">Type the project name to confirm</label>
+        <input id="push-confirm-input" data-testid="push-confirm-input" type="text" autocomplete="off" />
+        <div class="actions">
+          <button type="submit" id="push-confirm-button" data-testid="push-confirm-button" class="danger" disabled>Push test cases</button>
+          <button type="button" id="push-cancel-button" data-testid="push-cancel-button" class="secondary">Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

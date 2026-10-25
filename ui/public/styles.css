@@ -1,0 +1,141 @@
+:root {
+  --bg: #ffffff;
+  --surface: #f6f7f9;
+  --text: #1c2025;
+  --muted: #5b6573;
+  --border: #d5d9e0;
+  --accent: #1f6feb;
+  --danger: #c62828;
+  --ok: #1a7f37;
+  --warn-bg: #fff4d6;
+  --err-bg: #fde8e8;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14171c;
+    --surface: #1d2229;
+    --text: #e8ebf0;
+    --muted: #9aa5b4;
+    --border: #333b46;
+    --accent: #5aa2ff;
+    --danger: #ff6b6b;
+    --ok: #4cc16a;
+    --warn-bg: #3a3320;
+    --err-bg: #3d2224;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.page-header, main { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
+.page-header { padding-top: 24px; }
+h1 { margin: 0; font-size: 1.6rem; }
+h2 { font-size: 1.15rem; margin: 28px 0 8px; }
+.subtitle { margin: 4px 0 0; color: var(--muted); }
+.hint { color: var(--muted); font-weight: normal; font-size: 0.9rem; }
+
+label { display: block; margin: 12px 0 4px; font-weight: 600; }
+label.inline { display: inline-block; margin-right: 16px; font-weight: normal; }
+input[type="text"], input[type="search"], select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 16px 0 0; padding: 4px 12px 12px; }
+legend { padding: 0 6px; font-weight: 600; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+button, a.button {
+  display: inline-block;
+  padding: 8px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+button.secondary, a.button { background: transparent; color: var(--accent); }
+button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.banner { margin: 16px 0 0; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border); }
+.banner-warning { background: var(--warn-bg); }
+.banner-error { background: var(--err-bg); white-space: pre-wrap; }
+
+.progress-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
+progress { flex: 1; height: 14px; accent-color: var(--accent); }
+progress[data-state="failed"] { accent-color: var(--danger); }
+.progress-label { min-width: 12em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.steps, .notes, .history { list-style: none; margin: 0; padding: 0; }
+.steps li { padding: 6px 0; border-bottom: 1px solid var(--border); }
+.steps li::before { display: inline-block; width: 1.6em; }
+.steps li[data-state="running"]::before { content: "⏳"; }
+.steps li[data-state="done"]::before { content: "✓"; color: var(--ok); font-weight: bold; }
+.steps li[data-state="failed"]::before { content: "✕"; color: var(--danger); font-weight: bold; }
+.notes li { padding: 4px 0; color: var(--muted); font-size: 0.9rem; }
+details > summary { cursor: pointer; margin: 8px 0; color: var(--muted); }
+
+.summary { color: var(--muted); margin: 0 0 8px; }
+.filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+
+.context .hint { margin: 4px 0 8px; }
+.context-card { border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; margin: 8px 0; }
+.context-card label { margin: 0; }
+.context-options { margin: 8px 0 4px 24px; }
+.context-options label { display: block; margin: 4px 0; font-weight: normal; }
+.context-options .context-input { margin: 4px 0 4px 24px; }
+.context-options details { margin: 4px 0 0 24px; }
+.context-options pre.raw { max-height: 14em; overflow: auto; margin: 4px 0; font-size: 0.85rem; }
+
+.upload-box { margin-top: 16px; padding: 12px; border: 1px dashed var(--border); border-radius: 6px; }
+.upload-box label { margin-top: 0; }
+.upload-panel { margin-top: 12px; padding: 12px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); }
+.upload-panel p { margin: 0 0 8px; }
+.upload-panel button { margin-top: 12px; }
+.upload-warnings { margin: 0 0 8px; padding-left: 1.2em; color: var(--danger); }
+.upload-panel h3 { font-size: 0.95rem; margin: 10px 0 4px; }
+.upload-panel ul.changes { margin: 0; padding-left: 1.2em; overflow-wrap: anywhere; }
+
+.testcases { margin-top: 12px; }
+.testcases details { border: 1px solid var(--border); border-radius: 6px; margin: 6px 0; background: var(--surface); }
+.testcases summary { display: flex; gap: 10px; align-items: baseline; padding: 8px 12px; margin: 0; color: var(--text); }
+.testcases .tc-title { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
+.badge { font-size: 0.8rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+.tc-body { padding: 0 12px 12px; }
+.tc-body dl { margin: 8px 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
+.tc-body dt { color: var(--muted); }
+.tc-body dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+table.step-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.92rem; }
+.step-table th, .step-table td { text-align: left; vertical-align: top; padding: 6px 8px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+.step-table th:first-child, .step-table td:first-child { width: 2.5em; }
+
+.history li { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
+.history button { padding: 2px 10px; font-size: 0.9rem; }
+.raw { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+dialog { max-width: 520px; width: calc(100% - 32px); border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
+dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+dialog h2 { margin-top: 0; }
+
+[hidden] { display: none !important; }
+
+@media (max-width: 600px) {
+  .testcases summary { flex-wrap: wrap; }
+}
