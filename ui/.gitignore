@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.data/
+public/app.js
+public/progress.js
+test-results/
+playwright-report/
+.e2e-sandbox/

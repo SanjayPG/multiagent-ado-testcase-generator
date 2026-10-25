@@ -1,0 +1,56 @@
+// A stand-in for the `claude` CLI so tests never touch Azure DevOps or spend tokens.
+// It replays a real captured run (fixtures/stream-sample.jsonl) and writes the matching CSV.
+//   FAKE_CLAUDE_MODE=ok (default) | fail | hang
+//   FAKE_CLAUDE_DELAY_MS=<ms between replayed lines>   FAKE_CLAUDE_LOG=<file that receives the prompt>
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const args = process.argv.slice(2);
+const prompt = args[args.indexOf("-p") + 1] ?? "";
+const mode = process.env.FAKE_CLAUDE_MODE ?? "ok";
+const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 20);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+if (process.env.FAKE_CLAUDE_LOG) appendFileSync(process.env.FAKE_CLAUDE_LOG, `${prompt}\n`);
+
+if (mode === "fail") {
+  console.error("fake claude: simulated failure");
+  process.exit(1);
+}
+if (mode === "hang") {
+  await new Promise(() => setInterval(() => undefined, 1000));
+}
+
+const emit = (event) => process.stdout.write(`${JSON.stringify(event)}\n`);
+
+if (prompt.startsWith("/generate-test-cases")) {
+  // Same text as the real pipeline writes, plus one edge case whose steps contain markup,
+  // so the UI's escaping is exercised on every run.
+  const sample = readFileSync(path.join(here, "fixtures", "tc-sample.csv"), "utf8");
+  // The pipeline's CSV uses Windows line endings; a row delimiter that differs from the file's own would merge rows.
+  const eol = sample.includes("\r\n") ? "\r\n" : "\n";
+  const injection = [
+    `,Test Case,[TC-2-EDGE-99] Login handles script text in the Email field,Design,,2,"edge-case, security",,Not Automated,• None,N/A,Edge Case,1,"Type ""<script>alert(1)</script>"" into the Email field",Text is shown literally and no script runs`,
+    `,,,,,,,,,,,,2,Observe the page,TEST PASS — no alert dialog appears`,
+  ].join(eol) + eol;
+  const outDir = path.join(process.cwd(), "output");
+  mkdirSync(outDir, { recursive: true });
+  writeFileSync(path.join(outDir, "tc_2026-10-18.csv"), (sample.endsWith("\n") ? sample : sample + eol) + injection);
+
+  const lines = readFileSync(path.join(here, "fixtures", "stream-sample.jsonl"), "utf8").split("\n").filter(Boolean);
+  for (const line of lines) {
+    process.stdout.write(`${line}\n`);
+    await sleep(delay);
+  }
+} else if (prompt.startsWith("/push-test-cases")) {
+  emit({ type: "system", subtype: "init", session_id: "fake" });
+  emit({ type: "assistant", message: { content: [{ type: "tool_use", id: "push1", name: "Agent", input: { subagent_type: "push-agent", prompt: "{}" } }] } });
+  await sleep(delay);
+  emit({ type: "user", message: { content: [{ type: "tool_result", tool_use_id: "push1", content: "ok" }] } });
+  emit({ type: "result", subtype: "success", is_error: false, duration_ms: 1234, total_cost_usd: 0.1, result: "Push finished: created 24, linked 24, failed: none" });
+} else {
+  console.error(`fake claude: unsupported prompt ${prompt}`);
+  process.exit(2);
+}
