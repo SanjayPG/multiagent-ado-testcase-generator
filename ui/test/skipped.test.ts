@@ -20,6 +20,11 @@ describe("parseSkipped", () => {
     expect(parseSkipped("`[SKIP] PBI-4: Epic is not a PBI.`")).toEqual([{ id: 4, reason: "Epic is not a PBI" }]);
   });
 
+  it("reads a skip line inside a markdown code block", () => {
+    const text = "The fetch failed.\n\n```\n[SKIP] PBI-90000000: fetch failed\n```\n\nTo retry, check the id.";
+    expect(parseSkipped(text)).toEqual([{ id: 90000000, reason: "fetch failed" }]);
+  });
+
   it("ignores text that is not a skip line", () => {
     expect(parseSkipped("Generated 8 test cases for PBI 9.")).toEqual([]);
     expect(parseSkipped("[SKIP] PBI-9:")).toEqual([]);

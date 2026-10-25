@@ -62,13 +62,15 @@ const RULES: Rule[] = [
     },
   },
   {
-    pattern: /TF401232|work item .{0,40}(does not exist|not found)|PBI \d+.{0,40}(not found|does not exist|fetch failed)/i,
+    pattern:
+      /TF401232|work item .{0,40}(does not exist|not found)|\bPBI[ -]\d+.{0,40}(not found|does not exist|fetch failed)|\[SKIP\]\s*PBI-\d+:\s*(not found|fetch failed)/i,
     hint: {
       title: "A PBI could not be found",
       tone: "warning",
       steps: [
         "Check the PBI ids you typed. They must exist in the project shown at the top of the page.",
-        "Check that they are PBIs (or work items you can read) and not deleted.",
+        "If the id is right, check that ADO_PROJECT is the project that holds it, and that the item was not deleted.",
+        "If other ids work but this one never does, it is probably in another project or deleted. If nothing works, the full log shows whether the connection is the problem.",
       ],
     },
   },

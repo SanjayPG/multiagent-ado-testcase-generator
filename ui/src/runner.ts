@@ -293,7 +293,11 @@ export const startGenerate = async (
     prompt: buildGeneratePrompt(pbis, contextRequests.map((request) => request.kind), prepared.files),
     onSuccess: async ({ resultText, startedAtMs }) => {
       const produced = await locateGeneratedCsv(resultText, startedAtMs);
-      if (!produced) throw new Error("The run finished but no CSV file was found in output/.");
+      if (!produced) {
+        // Claude usually says why it stopped (a missing id, a Bug, a connection problem). Keep that, not just the symptom.
+        const said = resultText.trim().slice(0, 1500);
+        throw new Error(`The run finished but no CSV file was found in output/.${said ? `\n\nClaude's explanation:\n${said}` : ""}`);
+      }
       await saveCsvCopy(id, produced);
       const testCases = parseTestCases(await readFile(csvPath(id), "utf8"));
       // Ids the pipeline left out (for example a Bug), so the review can say so instead of hiding it.

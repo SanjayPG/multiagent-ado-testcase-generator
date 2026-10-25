@@ -175,6 +175,32 @@ describe("work items that are not PBIs", () => {
   });
 });
 
+describe("a PBI id that does not exist", () => {
+  it("explains it, names the id, and keeps Claude's own explanation in the message", async () => {
+    rmSync(path.join(sandbox, "output"), { recursive: true, force: true });
+    const runId = await startRun([96]);
+    const { meta } = await waitForStatus(runId, ["failed"]);
+
+    expect(meta.errorHint.title).toBe("A PBI could not be found");
+    expect(meta.errorHint.tone).toBe("warning");
+    expect(meta.skipped).toEqual([{ id: 96, reason: "not found in project TestProject" }]);
+    // The generic symptom stays first; Claude's reason follows it instead of being thrown away.
+    expect(meta.errorMessage).toContain("no CSV file was found");
+    expect(meta.errorMessage).toContain("Claude's explanation:");
+    expect(meta.errorMessage).toContain("The id probably does not exist");
+  });
+
+  it("still shows Claude's explanation when nothing in it is recognised", async () => {
+    rmSync(path.join(sandbox, "output"), { recursive: true, force: true });
+    process.env.FAKE_CLAUDE_MODE = "no-csv";
+    const runId = await startRun([2]);
+    const { meta } = await waitForStatus(runId, ["failed"]);
+
+    expect(meta.errorHint).toBeUndefined();
+    expect(meta.errorMessage).toContain("Claude's explanation:\nI looked at the work items and decided there was nothing to write.");
+  });
+});
+
 describe("a failure caused by the ado server", () => {
   it("explains the cause in plain words, keeps the raw reason, and records it in the log", async () => {
     // The app accepts a CSV written in the last two seconds, so clear the ones earlier tests left behind.

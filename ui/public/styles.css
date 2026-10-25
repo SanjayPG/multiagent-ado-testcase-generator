@@ -238,3 +238,4 @@ dialog h2 { margin-top: 0; }
 }
 #error .error-skipped { margin: 0 0 4px; font-weight: 600; white-space: pre-wrap; }
 .context-input textarea { display: block; resize: vertical; min-height: 8em; line-height: 1.4; }
+#error [data-testid="error-raw"] { white-space: pre-wrap; overflow-wrap: anywhere; }

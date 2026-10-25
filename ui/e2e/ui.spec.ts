@@ -317,6 +317,19 @@ test.describe("test case generator UI", () => {
     await expect(generator.testCases).toHaveCount(0);
   });
 
+  test("explains an id that does not exist, names it, and does not stop at the bare 'no CSV' line", async ({ page }) => {
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true });
+    await generator.generate("96");
+
+    await expect(generator.errorTitle).toHaveText("A PBI could not be found", { timeout: 20_000 });
+    await expect(generator.errorBanner).toHaveClass(/banner-warning/);
+    await expect(page.getByTestId("error-skipped")).toContainText("PBI 96: not found in project TestProject.");
+    await expect(generator.progressLabel).toContainText("Stopped after");
+    // Claude's own reason is one click away under Technical details.
+    await page.getByText("Technical details").click();
+    await expect(generator.errorRaw).toContainText("The id probably does not exist");
+  });
+
   test("keeps the line breaks and the table in Claude's notes", async ({ page }) => {
     await generator.generate("99");
     await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });

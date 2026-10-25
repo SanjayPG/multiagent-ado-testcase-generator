@@ -207,14 +207,15 @@ const showFailure = (runId: string, meta: RunMeta, fallback: string, place: Erro
   const hint = meta.errorHint;
   // Which ids were left out and why, so "not a PBI" names the work item instead of leaving it to guess.
   const skipped = (meta.skipped ?? []).map((item) => `PBI ${item.id}: ${item.reason}.`).join("\n");
+  const skippedLine = skipped ? [h("p", { class: "error-skipped", "data-testid": "error-skipped" }, skipped)] : [];
   const body: Node[] = hint
     ? [
         h("strong", { class: "error-title", "data-testid": "error-title" }, hint.title),
-        ...(skipped ? [h("p", { class: "error-skipped", "data-testid": "error-skipped" }, skipped)] : []),
+        ...skippedLine,
         h("ul", { class: "error-steps", "data-testid": "error-steps" }, ...hint.steps.map((step) => h("li", {}, step))),
         h("details", { class: "error-details" }, h("summary", {}, "Technical details"), h("pre", { class: "raw", "data-testid": "error-raw" }, raw)),
       ]
-    : [h("p", { "data-testid": "error-raw" }, raw)];
+    : [...skippedLine, h("p", { "data-testid": "error-raw" }, raw)];
   body.push(
     h(
       "p",

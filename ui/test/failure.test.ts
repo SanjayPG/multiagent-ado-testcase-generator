@@ -12,6 +12,9 @@ describe("explainFailure", () => {
     ["a signed-out Claude", "Not logged in · Please run /login", "Claude Code is not signed in"],
     ["a missing claude command", 'Could not start "claude": spawn claude ENOENT', "Claude Code could not be started"],
     ["a missing work item", "TF401232: Work item 4242 does not exist", "A PBI could not be found"],
+    ["a skip line for a failed fetch", "```\n[SKIP] PBI-90000000: fetch failed\n```", "A PBI could not be found"],
+    ["a skip line for an id that does not exist", "[SKIP] PBI-96: not found in project AISampleProject", "A PBI could not be found"],
+    ["a hyphenated PBI id that was not found", "PBI-7 was not found in the project", "A PBI could not be found"],
     ["the run timeout", "Timed out after 600 seconds.", "The run took too long and was stopped"],
   ])("recognises %s", (_name, text, title) => {
     const hint = explainFailure(text);
@@ -23,6 +26,12 @@ describe("explainFailure", () => {
     expect(explainFailure("The run finished but no CSV file was found in output/.", undefined, "CONNECT_TIMEOUT")?.title).toBe(
       "Couldn't connect to Azure DevOps",
     );
+  });
+
+  it("blames the connection, not the id, when both show up in the same output", () => {
+    const text = "The ado MCP server timed out (CONNECT_TIMEOUT).\n[SKIP] PBI-9: fetch failed";
+    expect(explainFailure(text)?.title).toBe("Couldn't connect to Azure DevOps");
+    expect(explainFailure(text)?.tone).toBe("error");
   });
 
   it("calls what the user typed a warning, and something that broke an error", () => {

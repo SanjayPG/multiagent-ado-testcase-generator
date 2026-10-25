@@ -9,8 +9,14 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = process.argv.slice(2);
 const prompt = args[args.indexOf("-p") + 1] ?? "";
-const mode =
-  process.env.FAKE_CLAUDE_MODE ?? (/--pbis\s+99\b/.test(prompt) ? "mcp-timeout" : /--pbis\s+98\b/.test(prompt) ? "not-a-pbi" : "ok");
+// PBI 99 / 98 / 96 stand in for the real failures: ado timing out, a Bug, and an id that does not exist.
+const modeForPrompt = () => {
+  if (/--pbis\s+99\b/.test(prompt)) return "mcp-timeout";
+  if (/--pbis\s+98\b/.test(prompt)) return "not-a-pbi";
+  if (/--pbis\s+96\b/.test(prompt)) return "not-found";
+  return "ok";
+};
+const mode = process.env.FAKE_CLAUDE_MODE ?? modeForPrompt();
 const delay = Number(process.env.FAKE_CLAUDE_DELAY_MS ?? 20);
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -34,6 +40,33 @@ if (mode === "leak") {
   emit({ type: "result", subtype: "error", is_error: true, duration_ms: 1, total_cost_usd: 0, result: `failed with ${token}` });
   await sleep(100);
   process.exit(1);
+}
+
+if (mode === "not-found") {
+  // An id that does not exist in the project: Claude explains in prose, with the skip line in a code block, and stops.
+  const text = [
+    "The fetch failed for PBI 96, and no other PBIs were requested. I stopped here and wrote no CSV.",
+    "",
+    "```",
+    "[SKIP] PBI-96: not found in project TestProject",
+    "```",
+    "",
+    "The id probably does not exist in that project. I have not confirmed which.",
+  ].join("\n");
+  emit({ type: "system", subtype: "init", session_id: "fake" });
+  emit({ type: "assistant", message: { content: [{ type: "text", text }] } });
+  emit({ type: "result", subtype: "success", is_error: false, duration_ms: 4000, total_cost_usd: 0.01, result: text });
+  await sleep(100);
+  process.exit(0);
+}
+
+if (mode === "no-csv") {
+  // Claude finishes cleanly and writes no CSV, with an explanation nothing recognises.
+  const text = "I looked at the work items and decided there was nothing to write.";
+  emit({ type: "system", subtype: "init", session_id: "fake" });
+  emit({ type: "result", subtype: "success", is_error: false, duration_ms: 1000, total_cost_usd: 0, result: text });
+  await sleep(100);
+  process.exit(0);
 }
 
 if (mode === "not-a-pbi") {
