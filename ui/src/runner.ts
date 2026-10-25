@@ -208,6 +208,9 @@ const launch = async ({ meta, prompt, onSuccess }: Launch): Promise<string> => {
     if (patch.status === "failed") {
       const hint = explainFailure(resultText, patch.errorMessage, stderrTail);
       if (hint) patch.errorHint = hint;
+      // A run that stopped because every id was left out still says which ones and why.
+      const skipped = parseSkipped(resultText);
+      if (skipped.length > 0) patch.skipped = skipped;
     }
     // The run's own status, not the process exit: claude can exit cleanly and the run still fail (no CSV).
     const outcome = run.cancelled ? "cancelled" : run.timedOut ? "timed out" : patch.status === "failed" ? "failed" : "finished";

@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 export type ContextKind = "hld" | "regression";
-export type ContextSource = "repo" | "upload" | "url";
+export type ContextSource = "repo" | "paste" | "upload" | "url";
 
 export class GeneratorPage {
   readonly projectName: Locator;
@@ -127,6 +127,8 @@ export class GeneratorPage {
   contextFile = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-file`);
   contextFileInfo = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-file-info`);
   contextUrlInput = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-url-input`);
+  contextPasteInput = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-paste-input`);
+  contextPasteInfo = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-paste-info`);
 
   // Ticks the box and picks where the document comes from.
   useContext = async (kind: ContextKind, source: ContextSource): Promise<void> => {

@@ -31,7 +31,6 @@
 
     <main>
       <div id="env-banner" class="banner banner-warning" role="alert" data-testid="env-banner" hidden></div>
-      <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
 
       <section class="card" aria-labelledby="generate-heading">
         <h2 id="generate-heading">1. Generate</h2>
@@ -45,8 +44,8 @@
             <details class="more">
               <summary>More</summary>
               <p class="hint">
-                It is summarised to about 500 words and given to every test-case writer. A file or URL you choose
-                here is used for this run only; the files in your repo's context/ folder are never changed.
+                It is summarised to about 500 words and given to every test-case writer. A file, pasted text or URL you
+                choose here is used for this run only; the files in your repo's context/ folder are never changed.
               </p>
             </details>
             <div id="context-cards" data-testid="context-cards"></div>
@@ -57,6 +56,10 @@
             <button type="button" id="cancel-button" data-testid="cancel-button" class="secondary" hidden>Cancel run</button>
           </div>
         </form>
+        <!-- Errors appear next to the controls that caused them: here for a run, under Push for the review. -->
+        <div id="error-slot-generate">
+          <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
+        </div>
       </section>
 
       <section class="card" id="progress-section" data-testid="progress-section" aria-labelledby="progress-heading" hidden>
@@ -120,6 +123,7 @@
           <a id="download-link" data-testid="download-link" class="button" href="#" download>Download CSV</a>
           <button type="button" id="push-button" data-testid="push-button" class="danger">Push to Azure DevOps…</button>
         </div>
+        <div id="error-slot-review"></div>
         <p class="run-tools hint">
           Something look wrong?
           <a id="results-log-link" data-testid="results-log-link" href="#" download>Download full log</a> ·

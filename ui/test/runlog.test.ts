@@ -169,6 +169,7 @@ describe("work items that are not PBIs", () => {
     const { meta } = await waitForStatus(runId, ["failed"]);
     expect(meta.errorHint.title).toBe("That work item is not a PBI");
     expect(meta.errorHint.tone).toBe("warning");
+    expect(meta.skipped).toEqual([{ id: 98, reason: "Bug is not a PBI" }]); // the box can name the id
     expect(meta.resultText).toContain("[SKIP] PBI-98: Bug is not a PBI");
     expect(meta.hasCsv).toBeUndefined();
   });

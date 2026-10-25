@@ -42,10 +42,11 @@ type RepoContext = {
 
 type ContextRequest =
   | { kind: ContextKind; source: "repo" }
+  | { kind: ContextKind; source: "paste"; text: string }
   | { kind: ContextKind; source: "upload"; name: string; text: string }
   | { kind: ContextKind; source: "url"; url: string };
 
-type ContextUsed = { kind: ContextKind; source: "repo" | "upload" | "url"; label: string; bytes: number };
+type ContextUsed = { kind: ContextKind; source: "repo" | "paste" | "upload" | "url"; label: string; bytes: number };
 
 type RunMeta = {
   id: string;
@@ -181,22 +182,35 @@ let currentSource: Source = "original";
 let stream: EventSource | null = null;
 
 // ---------- small helpers ----------
-const showError = (message: string | null): void => {
+// The error box sits next to the controls that caused it: under Generate for a run, under Push for the review.
+type ErrorPlace = "generate" | "review";
+const errorSlots: Record<ErrorPlace, HTMLElement> = { generate: byId("error-slot-generate"), review: byId("error-slot-review") };
+
+const placeError = (place: ErrorPlace): void => {
+  if (errorBanner.parentElement !== errorSlots[place]) errorSlots[place].append(errorBanner);
+};
+
+const showError = (message: string | null, place: ErrorPlace = "generate"): void => {
+  placeError(place);
   errorBanner.hidden = message === null;
   errorBanner.className = "banner banner-error";
   errorBanner.textContent = message ?? "";
+  if (message !== null) errorBanner.scrollIntoView({ block: "nearest" });
 };
 
 const logUrl = (runId: string): string => `/api/runs/${runId}/log?download=1`;
 const diagnosticsUrl = (runId: string): string => `/api/runs/${runId}/diagnostics`;
 
 // A failed run: say what is likely wrong and what to try, keep the raw reason one click away, and offer the log.
-const showFailure = (runId: string, meta: RunMeta, fallback: string): void => {
+const showFailure = (runId: string, meta: RunMeta, fallback: string, place: ErrorPlace = "generate"): void => {
   const raw = meta.errorMessage ?? fallback;
   const hint = meta.errorHint;
+  // Which ids were left out and why, so "not a PBI" names the work item instead of leaving it to guess.
+  const skipped = (meta.skipped ?? []).map((item) => `PBI ${item.id}: ${item.reason}.`).join("\n");
   const body: Node[] = hint
     ? [
         h("strong", { class: "error-title", "data-testid": "error-title" }, hint.title),
+        ...(skipped ? [h("p", { class: "error-skipped", "data-testid": "error-skipped" }, skipped)] : []),
         h("ul", { class: "error-steps", "data-testid": "error-steps" }, ...hint.steps.map((step) => h("li", {}, step))),
         h("details", { class: "error-details" }, h("summary", {}, "Technical details"), h("pre", { class: "raw", "data-testid": "error-raw" }, raw)),
       ]
@@ -211,10 +225,12 @@ const showFailure = (runId: string, meta: RunMeta, fallback: string): void => {
       h("a", { href: diagnosticsUrl(runId), download: "", "data-testid": "error-diagnostics-link" }, "Download diagnostics"),
     ),
   );
+  placeError(place);
   errorBanner.replaceChildren(...body);
   // Amber for something to change in what was typed, red for something that broke.
   errorBanner.className = hint?.tone === "warning" ? "banner banner-warning" : "banner banner-error";
   errorBanner.hidden = false;
+  errorBanner.scrollIntoView({ block: "nearest" });
 };
 
 const setRunning = (running: boolean): void => {
@@ -271,8 +287,14 @@ const createTracker = (bar: HTMLProgressElement, label: HTMLElement, expectedSte
   };
 };
 
-const toOutcome = (status: RunStatus): Exclude<Outcome, "running"> =>
-  status === "done" ? "done" : status === "cancelled" ? "cancelled" : "failed";
+const toOutcome = (meta: RunMeta): Exclude<Outcome, "running"> =>
+  meta.status === "done"
+    ? "done"
+    : meta.status === "cancelled"
+      ? "cancelled"
+      : meta.errorHint?.tone === "warning"
+        ? "stopped"
+        : "failed";
 
 const follow = (
   runId: string,
@@ -373,7 +395,13 @@ const describeContextUsed = (used: ContextUsed[]): string => {
   if (used.length === 0) return "Context: none";
   const parts = used.map((entry) => {
     const how =
-      entry.source === "upload" ? `your uploaded file "${entry.label}"` : entry.source === "url" ? `downloaded from ${entry.label}` : entry.label;
+      entry.source === "upload"
+        ? `your uploaded file "${entry.label}"`
+        : entry.source === "paste"
+          ? "your pasted text"
+          : entry.source === "url"
+            ? `downloaded from ${entry.label}`
+            : entry.label;
     return `${KIND_LABELS[entry.kind]} — ${how} (${formatBytes(entry.bytes)})`;
   });
   return `Context: ${parts.join("; ")}`;
@@ -387,9 +415,10 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
   const label = repo.label;
 
   const include = h("input", { type: "checkbox", "data-testid": `ctx-${kind}` });
-  const radio = (value: "repo" | "upload" | "url"): HTMLInputElement =>
+  const radio = (value: "repo" | "paste" | "upload" | "url"): HTMLInputElement =>
     h("input", { type: "radio", name: `ctx-${kind}-source`, value, "data-testid": `ctx-${kind}-${value}` });
   const repoRadio = radio("repo");
+  const pasteRadio = radio("paste");
   const uploadRadio = radio("upload");
   const urlRadio = radio("url");
 
@@ -397,7 +426,23 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     ? `Use ${repo.path} (${formatBytes(repo.bytes)}, updated ${new Date(repo.modifiedAt ?? "").toLocaleDateString()})`
     : `${repo.path} (not found)`;
   repoRadio.disabled = !repo.exists;
-  (repo.exists ? repoRadio : uploadRadio).checked = true;
+  // Pasting is the quickest way to move text out of a wiki, an email or a document, so it is the fallback.
+  (repo.exists ? repoRadio : pasteRadio).checked = true;
+
+  const pasteInfo = h("span", { class: "hint", "data-testid": `ctx-${kind}-paste-info` });
+  const pasteInput = h("textarea", { rows: "8", placeholder: "Paste the text here", "aria-label": `${label} text`, "data-testid": `ctx-${kind}-paste-input` });
+  pasteInput.addEventListener("input", () => {
+    const bytes = new Blob([pasteInput.value]).size;
+    pasteInfo.textContent =
+      bytes === 0 ? "" : bytes > MAX_CONTEXT_BYTES ? `${formatBytes(bytes)} — over the ${MAX_CONTEXT_BYTES / 1024} KB limit. Paste just the relevant section.` : formatBytes(bytes);
+  });
+  const pasteBox = h(
+    "div",
+    { class: "context-input" },
+    pasteInput,
+    h("div", { class: "hint" }, "Copy it from your wiki, an email or a document and paste it here (up to 200 KB). Formatting is dropped; the words are kept."),
+    pasteInfo,
+  );
 
   // A chosen file is read in the browser; the server never receives a path from the page.
   let chosen: { name: string; text: string } | null = null;
@@ -433,6 +478,8 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     { class: "context-options", "data-testid": `ctx-${kind}-options` },
     h("label", {}, repoRadio, ` ${repoText}`),
     ...(preview ? [preview] : []),
+    h("label", {}, pasteRadio, " Paste text"),
+    pasteBox,
     h("label", {}, uploadRadio, " Upload a document"),
     uploadBox,
     h("label", {}, urlRadio, " From a URL"),
@@ -441,11 +488,12 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
 
   const sync = (): void => {
     options.hidden = !include.checked;
+    pasteBox.hidden = !pasteRadio.checked;
     uploadBox.hidden = !uploadRadio.checked;
     urlBox.hidden = !urlRadio.checked;
     if (preview) preview.hidden = !repoRadio.checked;
   };
-  [include, repoRadio, uploadRadio, urlRadio].forEach((control) => control.addEventListener("change", sync));
+  [include, repoRadio, pasteRadio, uploadRadio, urlRadio].forEach((control) => control.addEventListener("change", sync));
   sync();
 
   contextCardsBox.append(h("div", { class: "context-card" }, h("label", { class: "inline" }, include, ` ${label}`), options));
@@ -454,6 +502,12 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     request: async () => {
       if (!include.checked) return null;
       if (repoRadio.checked) return { kind, source: "repo" };
+      if (pasteRadio.checked) {
+        const text = pasteInput.value;
+        if (!text.trim()) throw new Error(`${label}: paste some text, or choose another source.`);
+        if (new Blob([text]).size > MAX_CONTEXT_BYTES) throw new Error(`${label}: the pasted text is over the ${MAX_CONTEXT_BYTES / 1024} KB limit. Paste just the relevant section.`);
+        return { kind, source: "paste", text };
+      }
       if (urlRadio.checked) {
         const url = urlInput.value.trim();
         if (!url) throw new Error(`${label}: enter a URL, or choose another source.`);
@@ -621,7 +675,7 @@ const watchGenerate = async (runId: string, expectedSteps: number | null, starte
   try {
     await follow(runId, stepsList, notesList, (event) => tracker.onStep(event));
     const meta = await loadRun(runId);
-    tracker.finish(toOutcome(meta.status));
+    tracker.finish(toOutcome(meta));
     if (logDetails.open) void loadLog(); // the viewer was open while the run went on: show the end of it
   } finally {
     tracker.finish("failed"); // no-op when already finished; covers an exception on the way
@@ -665,7 +719,7 @@ uploadInput.addEventListener("change", () => {
       if (!response.ok) throw new Error((body as { error?: string }).error ?? `Upload failed (${response.status})`);
       await loadRun(runId);
     } catch (error) {
-      showError(errorText(error));
+      showError(errorText(error), "review");
     } finally {
       uploadInput.value = ""; // lets the same file be chosen again after editing it once more
     }
@@ -678,7 +732,7 @@ removeUploadButton.addEventListener("click", () => {
   showError(null);
   api(`/api/runs/${runId}/upload`, { method: "DELETE" })
     .then(() => loadRun(runId))
-    .catch((error) => showError(errorText(error)));
+    .catch((error) => showError(errorText(error), "review"));
 });
 
 // ---------- push ----------
@@ -704,7 +758,7 @@ pushForm.addEventListener("submit", (event) => {
   if (pushConfirmInput.value !== config.project || !currentRunId) return;
   const typedProject = pushConfirmInput.value;
   pushDialog.close();
-  void doPush(currentRunId, typedProject).catch((error) => showError(errorText(error)));
+  void doPush(currentRunId, typedProject).catch((error) => showError(errorText(error), "review"));
 });
 
 const doPush = async (runId: string, typedProject: string): Promise<void> => {
@@ -725,8 +779,8 @@ const doPush = async (runId: string, typedProject: string): Promise<void> => {
   try {
     await follow(pushRunId, pushSteps, null, (event) => tracker.onStep(event));
     const { meta } = await api<{ meta: RunMeta }>(`/api/runs/${pushRunId}`);
-    tracker.finish(toOutcome(meta.status));
-    if (meta.status !== "done") showFailure(pushRunId, meta, `The push ${meta.status}.`);
+    tracker.finish(toOutcome(meta));
+    if (meta.status !== "done") showFailure(pushRunId, meta, `The push ${meta.status}.`, "review");
     const result = meta.push;
     const pushed = meta.pushSource === "uploaded" ? "Pushed your uploaded file — " : "";
     pushSummary.textContent = result

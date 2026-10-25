@@ -92,7 +92,7 @@ h2 { font-size: 1.15rem; margin: 28px 0 8px; }
 
 label { display: block; margin: 12px 0 4px; font-weight: 600; }
 label.inline { display: inline-block; margin-right: 16px; font-weight: normal; }
-input[type="text"], input[type="search"], select {
+input[type="text"], input[type="search"], textarea, select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -236,3 +236,5 @@ dialog h2 { margin-top: 0; }
 @media (max-width: 600px) {
   .testcases summary { flex-wrap: wrap; }
 }
+#error .error-skipped { margin: 0 0 4px; font-weight: 600; white-space: pre-wrap; }
+.context-input textarea { display: block; resize: vertical; min-height: 8em; line-height: 1.4; }

@@ -63,6 +63,38 @@ test.describe("test case generator UI", () => {
     await expect(generator.contextUsed).toContainText('HLD — your uploaded file "my-hld.md"');
   });
 
+  test("runs with pasted text and says so in the review", async () => {
+    await generator.useContext("hld", "paste");
+    await expect(generator.contextPasteInput("hld")).toBeVisible();
+    await generator.contextPasteInput("hld").fill("Sessions expire after 30 minutes of inactivity.\n\n| Role | Limit |\n|---|---|\n| User | 5 tries |");
+    await expect(generator.contextPasteInfo("hld")).toContainText("B");
+
+    await generator.generateAndWaitForResults("2");
+    await expect(generator.contextUsed).toContainText("HLD — your pasted text");
+  });
+
+  test("keeps the paste box hidden until Paste text is chosen", async () => {
+    await generator.contextInclude("hld").check();
+    await expect(generator.contextPasteInput("hld")).toBeHidden(); // the repo file is the default when it exists
+    await generator.contextSource("hld", "paste").check();
+    await expect(generator.contextPasteInput("hld")).toBeVisible();
+    await generator.contextSource("hld", "upload").check();
+    await expect(generator.contextPasteInput("hld")).toBeHidden();
+  });
+
+  test("asks for text when Paste text is chosen but left empty, and for one over the limit", async () => {
+    await generator.useContext("hld", "paste");
+    await generator.generate("2");
+    await expect(generator.errorBanner).toContainText("HLD: paste some text");
+    await expect(generator.progressSection).toBeHidden();
+
+    await generator.contextPasteInput("hld").fill("word ".repeat(50_000));
+    await expect(generator.contextPasteInfo("hld")).toContainText("over the 200 KB limit");
+    await generator.generateButton.click();
+    await expect(generator.errorBanner).toContainText("over the 200 KB limit");
+    await expect(generator.progressSection).toBeHidden();
+  });
+
   test("asks for a document or a URL when that source is chosen but left empty", async () => {
     await generator.useContext("hld", "upload");
     await generator.generate("2");
@@ -268,7 +300,7 @@ test.describe("test case generator UI", () => {
     await expect(generator.skipped).toBeHidden();
   });
 
-  test("explains that a Bug is not a PBI when every id was one", async () => {
+  test("explains that a Bug is not a PBI when every id was one", async ({ page }) => {
     // The app accepts a CSV written in the last two seconds, so clear the one the previous test left behind.
     rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true });
     await generator.generate("98");
@@ -277,6 +309,10 @@ test.describe("test case generator UI", () => {
     // Something to change in what was typed: amber, not the red used for a break.
     await expect(generator.errorBanner).toHaveClass(/banner-warning/);
     await expect(generator.errorBanner).not.toHaveClass(/banner-error/);
+    // It names the id, sits under the Generate button (not above the form), and the run is "stopped", not "failed".
+    await expect(page.getByTestId("error-skipped")).toContainText("PBI 98: Bug is not a PBI.");
+    await expect(page.locator("#error-slot-generate #error")).toBeVisible();
+    await expect(generator.progressLabel).toContainText("Stopped after");
     await expect(generator.errorSteps).toContainText("Product Backlog Item");
     await expect(generator.testCases).toHaveCount(0);
   });

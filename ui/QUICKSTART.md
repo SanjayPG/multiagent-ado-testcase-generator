@@ -73,8 +73,10 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
 ## 5. Use it
 
 1. **Generate.** Type PBI ids (comma separated, e.g. `2, 3`). Optionally pick extra context: the repo's
-   file, an uploaded document, or a URL. It is used for this run only, and nothing is loaded unless you
-   choose it. Click **Generate test cases**.
+   file, text you paste (the quickest way to bring in a wiki page or an email), an uploaded document, or a
+   URL (public pages only). It is used for this run only, and nothing is loaded unless you choose it.
+   Click **Generate test cases**. If an id is not a PBI (a Bug, for example), the message appears right
+   under the button and names the id.
 2. **Watch.** The progress bar counts the steps and shows elapsed time; **Run log** shows the raw events.
    Only one run at a time. **Cancel run** stops a stuck one.
 3. **Review.** Filter by type, PBI, or text. Download the ADO CSV.

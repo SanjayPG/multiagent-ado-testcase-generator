@@ -17,10 +17,11 @@ export const DEFAULT_CONTEXT_FILES: Record<ContextFlag, string> = {
 };
 export const CONTEXT_LABELS: Record<ContextFlag, string> = { hld: "HLD", regression: "Regression scripts" };
 
-export type ContextSource = "repo" | "upload" | "url";
+export type ContextSource = "repo" | "paste" | "upload" | "url";
 
 export type ContextRequest =
   | { kind: ContextFlag; source: "repo" }
+  | { kind: ContextFlag; source: "paste"; text: string }
   | { kind: ContextFlag; source: "upload"; name: string; text: string }
   | { kind: ContextFlag; source: "url"; url: string };
 
@@ -45,6 +46,16 @@ const parseEntry = (entry: unknown): ContextRequest => {
 
   if (source === "repo") return { kind, source };
 
+  if (source === "paste") {
+    const { text } = entry as { text?: unknown };
+    if (typeof text !== "string" || text.trim() === "") throw new ValidationError(`${label}: paste some text, or choose another source.`);
+    if (Buffer.byteLength(text, "utf8") > MAX_CONTEXT_BYTES) {
+      throw new ValidationError(`${label}: the pasted text is over the ${MAX_CONTEXT_BYTES / 1024} KB limit. Paste just the relevant section.`);
+    }
+    if (text.includes("\u0000")) throw new ValidationError(`${label}: the pasted text looks like binary data, not text.`);
+    return { kind, source, text };
+  }
+
   if (source === "upload") {
     const { name, text } = entry as { name?: unknown; text?: unknown };
     if (typeof name !== "string" || name.trim() === "" || name.length > 200) throw new ValidationError(`${label}: the file needs a name.`);
@@ -63,7 +74,7 @@ const parseEntry = (entry: unknown): ContextRequest => {
     return { kind, source, url: url.trim() };
   }
 
-  throw new ValidationError(`${label}: choose a source (repo, upload or url).`);
+  throw new ValidationError(`${label}: choose a source (repo, paste, upload or url).`);
 };
 
 export const parseContextRequests = (input: unknown): ContextRequest[] => {
@@ -104,7 +115,10 @@ export const prepareContext = async (
 
     let text: string;
     let sourceLabel: string;
-    if (request.source === "upload") {
+    if (request.source === "paste") {
+      text = request.text;
+      sourceLabel = "pasted text";
+    } else if (request.source === "upload") {
       text = hasExtension(request.name, HTML_EXTENSIONS) ? htmlToText(request.text) : request.text;
       sourceLabel = request.name;
     } else {
