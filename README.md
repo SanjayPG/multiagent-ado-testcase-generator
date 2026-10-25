@@ -173,6 +173,22 @@ You will be asked to confirm before anything is written.
 
 ---
 
+## Web UI (optional)
+
+The slash commands above keep working exactly as before. `ui/` is an optional local web page that
+drives the *same* commands, so there is one code path: enter PBI ids, watch the run, review and edit
+the test cases, and push to Azure DevOps after typing the project name.
+
+```bash
+cd ui
+pnpm install
+pnpm dev          # http://127.0.0.1:3210
+```
+
+Full steps, environment variables and troubleshooting: **[Web UI quick start](ui/QUICKSTART.md)**.
+
+---
+
 ## Output CSV format
 
 The file matches ADO's native Test Case export, so it imports directly. One row per step; the
