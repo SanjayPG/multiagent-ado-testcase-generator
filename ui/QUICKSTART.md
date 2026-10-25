@@ -42,7 +42,23 @@ export ADO_PAT_B64="$(printf '%s' 'you@company.com:YOUR_PAT' | base64 | tr -d '\
 
 How to create the PAT is in the [README, Setup](../README.md#setup).
 
-## 3. Start it
+## 3. Check Claude Code (one time)
+
+The page does not generate anything itself. It starts Claude Code in the background and runs the
+repo's slash commands (see [How the page works with Claude Code](#6-how-the-page-works-with-claude-code)).
+So Claude Code must work from the terminal that starts the page:
+
+1. **`claude` is on the PATH.** Run `claude --version`. If the command is not found, install Claude Code
+   first (see the [README, Prerequisites](../README.md#prerequisites)).
+2. **You are signed in.** Run `claude` once, interactively. If it asks you to log in, sign in first.
+3. **Approve the project once.** In the **repo root** (the folder that contains `.mcp.json`), run `claude`
+   interactively and accept the prompts to trust the folder and to use the `ado` MCP server. A background
+   run cannot answer those prompts, so if they were never approved, the first run in a new clone fails.
+
+Run these in the same kind of terminal you will use for `pnpm dev`, with the environment variables from
+step 2 set, because the `ado` server reads them.
+
+## 4. Start it
 
 ```bash
 cd ui
@@ -53,7 +69,7 @@ pnpm dev          # http://127.0.0.1:3210
 The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PROJECT` are set. Open
 **http://127.0.0.1:3210**. To use another port, set `UI_PORT` first.
 
-## 4. Use it
+## 5. Use it
 
 1. **Generate.** Type PBI ids (comma separated, e.g. `2, 3`). Optionally pick extra context: the repo's
    file, an uploaded document, or a URL. It is used for this run only, and nothing is loaded unless you
@@ -68,13 +84,43 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
    The result shows created, linked and failed. Pushing creates real work items, so try a test project
    first.
 
-## 5. Safety
+## 6. How the page works with Claude Code
+
+You can run the pipeline two ways, and both use the **same commands, agents and skills**:
+
+| | Interactive Claude Code (terminal) | This web page |
+|---|---|---|
+| How you start it | Run `claude` in the repo, then type `/generate-test-cases --pbis 2,3` | Type the PBI ids and click **Generate test cases** |
+| What runs | The slash command in `.claude/commands`, which follows `CLAUDE.md` | The same slash command, started as `claude -p "/generate-test-cases --pbis 2,3 ..."` |
+| Who watches | You, in the terminal | The page, from Claude's streamed output (`--output-format stream-json`) |
+| Questions to you | Claude can ask, e.g. `Confirm? (yes/no)` before a push | None. A background run has no one to answer |
+
+What happens when you click **Generate test cases**:
+
+1. The page's local server runs `claude -p` from the repo folder, so Claude Code reads `CLAUDE.md`,
+   `.claude/agents` and `.mcp.json`.
+2. Claude fetches the PBIs through the `ado` MCP server, starts one `tc-subagent` per PBI in parallel,
+   merges the results and writes `output/tc_YYYY-MM-DD.csv`.
+3. The server turns Claude's streamed events into the progress bar, step count and **Run log**, and reads
+   the CSV for the **Review** table. **Cancel run** stops the Claude process.
+4. **Push** is the same idea: the server runs `/push-test-cases --file ... --yes`. The `--yes` flag skips
+   the terminal's `Confirm? (yes/no)` question, because the page has already made you type the project
+   name and the server re-checks it.
+
+Because the page runs Claude without a person at the keyboard, two things follow:
+
+- Anything that needs a one-time answer (trusting the folder, approving the `ado` server) must be done
+  once in interactive Claude Code first. That is step 3.
+- The page and an interactive session do the same work. If something fails in the page, you can reproduce
+  it by running the same slash command in an interactive `claude` session and reading the messages there.
+
+## 7. Safety
 
 - Binds to `127.0.0.1` only, rejects other Host/Origin headers, and never sends the PAT to the browser.
 - A push needs the typed project name, and the server re-checks it and the test case count.
 - A URL context source cannot point at this machine.
 
-## 6. Tests
+## 8. Tests
 
 ```bash
 pnpm test    # unit + API tests, no network
@@ -87,5 +133,6 @@ pnpm e2e     # Playwright against a fake `claude` that replays a recorded run (n
 |---|---|
 | Startup shows `MISSING` for a variable | It was not set in the terminal that runs `pnpm dev` |
 | Run fails straight away | `claude` is not installed or not signed in; run `claude` once in a terminal |
+| First run in a new clone fails or hangs on the ADO step | The folder or the `ado` MCP server was never approved; do step 3 in interactive `claude` |
 | PBI fetch fails | `ado` MCP server did not connect (check the PAT scopes, expiry and `ADO_ORG`) |
 | Port already in use | Set `UI_PORT` to a free port |
