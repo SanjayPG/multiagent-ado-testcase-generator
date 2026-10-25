@@ -164,6 +164,11 @@ generate-test-cases --pbis 123,456,789 --context hld,regression
 
 Output lands in `output/tc_YYYY-MM-DD.csv`. Open in Excel, review, edit if needed.
 
+**Only PBIs are accepted.** Each id is checked against its work item type. The PBI types are
+`Product Backlog Item` (Scrum), `User Story` (Agile), `Requirement` (CMMI) and `Issue` (Basic). Anything
+else, such as a Bug, Task or Epic, is skipped with `[SKIP] PBI-9: Bug is not a PBI`, and the other ids carry on.
+If every id is skipped, no CSV is written.
+
 ### Push reviewed file to ADO
 
 ```bash

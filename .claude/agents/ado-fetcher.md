@@ -32,7 +32,7 @@ Call `mcp__ado__wit_work_item` with:
   "action": "get_batch",
   "project": "{project}",
   "ids": [123, 456, 789],
-  "fields": ["System.Id", "System.Title", "System.Description", "Microsoft.VSTS.Common.AcceptanceCriteria", "System.Parent"]
+  "fields": ["System.Id", "System.Title", "System.WorkItemType", "System.Description", "Microsoft.VSTS.Common.AcceptanceCriteria", "System.Parent"]
 }
 ```
 
@@ -63,6 +63,7 @@ For each PBI:
 [
   {
     "pbi_id": 123,
+    "work_item_type": "Product Backlog Item",
     "pbi_title": "User can log in with email and password",
     "pbi_description": "As a registered user, I want to log in using my email and password so that I can access my account.",
     "acceptance_criteria": "- Login succeeds with valid credentials\n- Invalid password shows error message\n- Account locks after 5 failed attempts",
@@ -77,6 +78,8 @@ never reuse the example text.
 
 If a PBI has no parent Epic, set `parent_epic_id: null` and `parent_epic_title: "Unknown"`.
 If a PBI fetch fails, include it with all fields set to `null` and add `"fetch_error": true`.
+`work_item_type` is the value ADO reports in `System.WorkItemType`, copied exactly. Return every
+item you were asked for, whatever its type: the coordinator decides which types are PBIs, not me.
 
 ---
 

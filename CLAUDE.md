@@ -39,8 +39,16 @@ Spawn the `ado-fetcher` subagent via the Task tool, by name, with:
 ```
 { "pbi_ids": [123, 456, ...], "project": "<ADO project from Step 1>" }
 ```
-Wait for response. Expected: JSON array of slim PBI objects.
+Wait for response. Expected: JSON array of slim PBI objects, each with its `work_item_type`.
 If fetch fails for any PBI, log the failure and continue with the rest.
+
+**Keep only PBIs.** The ids the user typed can point at any work item, so check each returned
+`work_item_type` before going on. These are the PBI types, one per Azure DevOps process template:
+`Product Backlog Item` (Scrum), `User Story` (Agile), `Requirement` (CMMI), `Issue` (Basic).
+- Any other type (Bug, Task, Feature, Epic, Test Case, …): log `[SKIP] PBI-{id}: {work_item_type} is not a PBI`
+  and drop it. Do NOT load context for it, spawn a `tc-subagent` for it, or put it in the CSV.
+- No `work_item_type` in the response: treat it as a failed fetch (`[SKIP] PBI-{id}: fetch failed`).
+- If no PBI is left, stop here: tell the user which ids were skipped and why, write no CSV, and do not continue.
 
 ### Step 3 — Load context (only if --context flag present)
 - `hld` → read the file named by `--hld-file` if it was passed, otherwise `context/hld.md`; summarize to max 500 words
@@ -93,6 +101,8 @@ Pass per subagent:
   - Total TCs generated and total CSV rows written
   - Breakdown by type (Positive / Negative / Edge Case / Performance / Boundary)
   - Breakdown by PBI
+  - Skipped ids and why (not a PBI, fetch failed, no test cases), if any: one line each, exactly
+    `[SKIP] PBI-{id}: {reason}`, for example `[SKIP] PBI-9: Bug is not a PBI` (the web UI reads these lines)
   - Output file path
   - Next step hint: "Review the file, then run: push-test-cases --file output/tc_YYYY-MM-DD.csv"
 
@@ -135,6 +145,8 @@ Wait for response. Print final summary: created N, linked N, failed: [list].
 
 ## Error handling
 - ADO fetch failure for a PBI: log `[SKIP] PBI-{id}: fetch failed` and continue
+- Work item that is not a PBI (a Bug, Task, Epic, …): log `[SKIP] PBI-{id}: {work_item_type} is not a PBI` and continue
+- Every id skipped: stop, list the ids and reasons, and write no CSV
 - Subagent returns empty array: log `[WARN] PBI-{id}: no TCs generated` and continue
 - Subagent returns malformed JSON: log `[ERROR] PBI-{id}: invalid output` and continue
 - Never abort the full pipeline for a single PBI failure
