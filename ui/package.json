@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "description": "Local web UI for the tc-generator pipeline (drives the existing slash commands via claude -p)",
   "scripts": {
     "build:client": "tsc -p tsconfig.client.json",
