@@ -247,6 +247,7 @@ test.describe("test case generator UI", () => {
     await generator.generate("99");
 
     await expect(generator.errorTitle).toHaveText("Couldn't connect to Azure DevOps", { timeout: 20_000 });
+    await expect(generator.errorBanner).toHaveClass(/banner-error/);
     await expect(generator.errorSteps).toContainText("ADO_PAT_B64");
     // The raw reason is folded away until asked for.
     await expect(generator.errorRaw).toBeHidden();
@@ -273,6 +274,9 @@ test.describe("test case generator UI", () => {
     await generator.generate("98");
 
     await expect(generator.errorTitle).toHaveText("That work item is not a PBI", { timeout: 20_000 });
+    // Something to change in what was typed: amber, not the red used for a break.
+    await expect(generator.errorBanner).toHaveClass(/banner-warning/);
+    await expect(generator.errorBanner).not.toHaveClass(/banner-error/);
     await expect(generator.errorSteps).toContainText("Product Backlog Item");
     await expect(generator.testCases).toHaveCount(0);
   });

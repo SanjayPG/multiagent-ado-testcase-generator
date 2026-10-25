@@ -159,12 +159,12 @@ progress[data-state="failed"] { accent-color: var(--danger); }
 .run-tools a:hover { color: var(--accent); }
 
 /* A recognised failure: a title, what to try, and the raw reason folded away. */
-.banner-error .error-title { display: block; margin-bottom: 4px; }
-.banner-error .error-steps { margin: 4px 0 8px; padding-left: 1.3em; }
-.banner-error .error-details { margin: 4px 0 8px; }
-.banner-error .error-details pre { max-height: 14em; overflow: auto; margin: 4px 0 0; font-size: 0.85rem; background: var(--bg); }
-.banner-error .error-links { margin: 8px 0 0; }
-.banner-error .error-links a { color: inherit; text-underline-offset: 3px; }
+#error .error-title { display: block; margin-bottom: 4px; }
+#error .error-steps { margin: 4px 0 8px; padding-left: 1.3em; }
+#error .error-details { margin: 4px 0 8px; }
+#error .error-details pre { max-height: 14em; overflow: auto; margin: 4px 0 0; font-size: 0.85rem; background: var(--bg); }
+#error .error-links { margin: 8px 0 0; }
+#error .error-links a { color: inherit; text-underline-offset: 3px; }
 details > summary { cursor: pointer; margin: 8px 0; color: var(--muted); }
 
 .summary { color: var(--muted); margin: 0 0 8px; }

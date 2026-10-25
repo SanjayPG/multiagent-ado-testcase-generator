@@ -56,7 +56,7 @@ type RunMeta = {
   parentRunId?: string;
   resultText?: string;
   errorMessage?: string;
-  errorHint?: { title: string; steps: string[] };
+  errorHint?: { title: string; steps: string[]; tone: "warning" | "error" };
   skipped?: Array<{ id: number; reason: string }>;
   hasCsv?: boolean;
   testCaseCount?: number;
@@ -183,6 +183,7 @@ let stream: EventSource | null = null;
 // ---------- small helpers ----------
 const showError = (message: string | null): void => {
   errorBanner.hidden = message === null;
+  errorBanner.className = "banner banner-error";
   errorBanner.textContent = message ?? "";
 };
 
@@ -211,6 +212,8 @@ const showFailure = (runId: string, meta: RunMeta, fallback: string): void => {
     ),
   );
   errorBanner.replaceChildren(...body);
+  // Amber for something to change in what was typed, red for something that broke.
+  errorBanner.className = hint?.tone === "warning" ? "banner banner-warning" : "banner banner-error";
   errorBanner.hidden = false;
 };
 

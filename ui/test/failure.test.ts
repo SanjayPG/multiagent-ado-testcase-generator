@@ -25,6 +25,14 @@ describe("explainFailure", () => {
     );
   });
 
+  it("calls what the user typed a warning, and something that broke an error", () => {
+    expect(explainFailure("[SKIP] PBI-9: Bug is not a PBI")?.tone).toBe("warning");
+    expect(explainFailure("TF401232: Work item 4242 does not exist")?.tone).toBe("warning");
+    expect(explainFailure("CONNECT_TIMEOUT")?.tone).toBe("error");
+    expect(explainFailure("Not logged in · Please run /login")?.tone).toBe("error");
+    expect(explainFailure("Timed out after 600 seconds.")?.tone).toBe("error");
+  });
+
   it("says nothing when it does not recognise the failure", () => {
     expect(explainFailure("something unexpected happened")).toBeNull();
     expect(explainFailure(undefined, "")).toBeNull();

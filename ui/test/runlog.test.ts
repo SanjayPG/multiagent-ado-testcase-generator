@@ -168,6 +168,7 @@ describe("work items that are not PBIs", () => {
     const runId = await startRun([98]);
     const { meta } = await waitForStatus(runId, ["failed"]);
     expect(meta.errorHint.title).toBe("That work item is not a PBI");
+    expect(meta.errorHint.tone).toBe("warning");
     expect(meta.resultText).toContain("[SKIP] PBI-98: Bug is not a PBI");
     expect(meta.hasCsv).toBeUndefined();
   });
@@ -184,6 +185,7 @@ describe("a failure caused by the ado server", () => {
     expect(meta.errorMessage).toContain("no CSV file was found");
     expect(meta.resultText).toContain("CONNECT_TIMEOUT");
     expect(meta.errorHint.title).toBe("Couldn't connect to Azure DevOps");
+    expect(meta.errorHint.tone).toBe("error");
     expect(meta.errorHint.steps.join(" ")).toContain("ADO_PAT_B64");
 
     const log = (await get(`/api/runs/${runId}/log`)).body;

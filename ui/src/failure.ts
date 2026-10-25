@@ -1,7 +1,8 @@
 // Turns the raw reason a run failed into a plain title and next steps. Raw text stays available next to it.
-export type ErrorHint = { title: string; steps: string[] };
+// "warning" is for what the user typed (an id that is not a PBI); "error" is for something that broke.
+export type ErrorHint = { title: string; steps: string[]; tone: "warning" | "error" };
 
-type Rule = { pattern: RegExp; hint: ErrorHint };
+type Rule = { pattern: RegExp; hint: Omit<ErrorHint, "tone"> & { tone?: ErrorHint["tone"] } };
 
 // Order matters: the first rule that matches wins, so the more specific causes come first.
 const RULES: Rule[] = [
@@ -19,6 +20,7 @@ const RULES: Rule[] = [
     pattern: /\bis not a PBI\b|\bnot a (PBI|product backlog item)\b/i,
     hint: {
       title: "That work item is not a PBI",
+      tone: "warning",
       steps: [
         "Use the ids of PBIs: Product Backlog Item, User Story, Requirement or Issue, depending on your project's process.",
         "Open the item in Azure DevOps and check its type. Bugs, Tasks, Features and Epics are skipped.",
@@ -63,6 +65,7 @@ const RULES: Rule[] = [
     pattern: /TF401232|work item .{0,40}(does not exist|not found)|PBI \d+.{0,40}(not found|does not exist|fetch failed)/i,
     hint: {
       title: "A PBI could not be found",
+      tone: "warning",
       steps: [
         "Check the PBI ids you typed. They must exist in the project shown at the top of the page.",
         "Check that they are PBIs (or work items you can read) and not deleted.",
@@ -83,5 +86,6 @@ const RULES: Rule[] = [
 
 export const explainFailure = (...texts: Array<string | undefined>): ErrorHint | null => {
   const combined = texts.filter((text): text is string => Boolean(text)).join("\n");
-  return RULES.find((rule) => rule.pattern.test(combined))?.hint ?? null;
+  const hint = RULES.find((rule) => rule.pattern.test(combined))?.hint;
+  return hint ? { tone: "error", ...hint } : null;
 };
