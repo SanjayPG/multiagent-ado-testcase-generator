@@ -67,8 +67,18 @@
         </div>
         <ol id="steps" class="steps" aria-live="polite" data-testid="steps"></ol>
         <details>
-          <summary>Run log</summary>
-          <ol id="notes" class="notes"></ol>
+          <summary>Claude's notes</summary>
+          <ol id="notes" class="notes" data-testid="notes"></ol>
+        </details>
+        <details id="log-details" data-testid="log-details" class="log-details">
+          <summary>Full log</summary>
+          <p class="hint">Everything the run printed, with secrets removed. Send the diagnostics file if you ask someone for help.</p>
+          <div class="log-tools">
+            <button type="button" id="log-refresh" data-testid="log-refresh" class="secondary">Refresh</button>
+            <a id="log-download" data-testid="log-download" class="button" href="#" download>Download full log</a>
+            <a id="diagnostics-download" data-testid="diagnostics-download" class="button" href="#" download>Download diagnostics</a>
+          </div>
+          <pre id="log-view" class="raw log-view" data-testid="log-view" tabindex="0"></pre>
         </details>
       </section>
 
@@ -109,6 +119,11 @@
           <a id="download-link" data-testid="download-link" class="button" href="#" download>Download CSV</a>
           <button type="button" id="push-button" data-testid="push-button" class="danger">Push to Azure DevOps…</button>
         </div>
+        <p class="run-tools hint">
+          Something look wrong?
+          <a id="results-log-link" data-testid="results-log-link" href="#" download>Download full log</a> ·
+          <a id="results-diagnostics-link" data-testid="results-diagnostics-link" href="#" download>Download diagnostics</a>
+        </p>
       </section>
 
       <section class="card" id="push-section" aria-labelledby="push-heading" hidden>
@@ -120,6 +135,10 @@
         <ol id="push-steps" class="steps" aria-live="polite" data-testid="push-steps"></ol>
         <p id="push-summary" class="summary" data-testid="push-summary"></p>
         <pre id="push-raw" class="raw" data-testid="push-raw"></pre>
+        <p class="run-tools hint">
+          <a id="push-log-link" data-testid="push-log-link" href="#" download>Download full log</a> ·
+          <a id="push-diagnostics-link" data-testid="push-diagnostics-link" href="#" download>Download diagnostics</a>
+        </p>
       </section>
 
       <section class="card" aria-labelledby="history-heading">

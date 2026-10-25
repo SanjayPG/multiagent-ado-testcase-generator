@@ -5,9 +5,12 @@ import { config } from "./config.js";
 import { prepareContext, type ContextRequest } from "./context.js";
 import { parseTestCases } from "./csv.js";
 import { createEventMapper, extractCsvPath, type RunEvent } from "./events.js";
+import { explainFailure } from "./failure.js";
 import { fetchPage, type FetchPage } from "./fetchPage.js";
 import {
+  MAX_LOG_BYTES,
   appendEvent,
+  appendLog,
   createRunId,
   csvPath,
   effectiveCsv,
@@ -140,6 +143,21 @@ const launch = async ({ meta, prompt, onSuccess }: Launch): Promise<string> => {
     throw error;
   }
 
+  // The raw output of the claude process, kept per run so a failure can be investigated afterwards.
+  // Secrets are removed before anything is written, and the file stops growing at MAX_LOG_BYTES.
+  let logQueue: Promise<void> = Promise.resolve();
+  let logBytes = 0;
+  let logFull = false;
+  const writeLog = (text: string): void => {
+    if (logFull) return;
+    const safe = redactSecrets(text);
+    logBytes += Buffer.byteLength(safe);
+    const toWrite = logBytes > MAX_LOG_BYTES ? `[ui] log stopped: it reached ${MAX_LOG_BYTES} bytes\n` : safe;
+    if (logBytes > MAX_LOG_BYTES) logFull = true;
+    logQueue = logQueue.then(() => appendLog(meta.id, toWrite)).catch(() => undefined);
+  };
+  writeLog(`[ui] ${new Date().toISOString()} ${meta.kind} run ${meta.id} started: claude -p ${prompt}\n`);
+
   const startedAtMs = Date.now();
   const mapper = createEventMapper();
   let lastResult: Extract<RunEvent, { kind: "result" }> | null = null;
@@ -148,6 +166,7 @@ const launch = async ({ meta, prompt, onSuccess }: Launch): Promise<string> => {
   let finishedOnce = false;
 
   const handleLine = (line: string): void => {
+    if (line.trim() !== "") writeLog(`${line}\n`);
     for (const event of mapper.map(line)) {
       if (event.kind === "result") lastResult = event;
       emit(event);
@@ -183,9 +202,20 @@ const launch = async ({ meta, prompt, onSuccess }: Launch): Promise<string> => {
       }
     }
 
+    // A plain-language cause, matched on everything we know: Claude's own explanation often says why
+    // (for example that the ado server timed out) even when the run only "fails" for lack of a CSV.
+    if (patch.status === "failed") {
+      const hint = explainFailure(resultText, patch.errorMessage, stderrTail);
+      if (hint) patch.errorHint = hint;
+    }
+    // The run's own status, not the process exit: claude can exit cleanly and the run still fail (no CSV).
+    const outcome = run.cancelled ? "cancelled" : run.timedOut ? "timed out" : patch.status === "failed" ? "failed" : "finished";
+    writeLog(`[ui] ${new Date().toISOString()} ${outcome}, exit code ${exitCode ?? "none"}${patch.errorMessage ? `: ${patch.errorMessage}` : ""}\n`);
+
     // Release the lock BEFORE the final status becomes visible: whoever sees "done" must be able to start the
     // next run (or a push) straight away. All file work for this run is finished by now.
     await writeQueue; // flush events first, so a replay of this run sees all of them
+    await logQueue;
     active = null;
 
     const finalMeta = await updateMeta(meta.id, {
@@ -225,9 +255,12 @@ const launch = async ({ meta, prompt, onSuccess }: Launch): Promise<string> => {
   child.stderr.setEncoding("utf8");
   child.stderr.on("data", (chunk: string) => {
     stderrTail = (stderrTail + chunk).slice(-4000);
+    const lines = chunk.split("\n").filter((line) => line.trim() !== "");
+    if (lines.length > 0) writeLog(`${lines.map((line) => `[stderr] ${line}`).join("\n")}\n`);
   });
   child.on("error", (error) => {
     stderrTail = `Could not start "${config.claudeBin}": ${error.message}`;
+    writeLog(`[ui] ${stderrTail}\n`);
     void finalize(null);
   });
   child.on("close", (code) => void finalize(code));

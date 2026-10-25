@@ -16,7 +16,8 @@ type Json = Record<string, unknown>;
 const isObject = (value: unknown): value is Json => typeof value === "object" && value !== null;
 
 const MERGE_STEP_ID = "merge-and-write";
-const MAX_NOTE_LENGTH = 300;
+// Long enough for a final summary with its table; the full text is in the saved log anyway.
+const MAX_NOTE_LENGTH = 2000;
 
 const labelForSubagent = (subagentType: string, prompt: string): string => {
   if (subagentType === "ado-fetcher") return "Fetching PBIs from Azure DevOps";

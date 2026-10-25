@@ -3,6 +3,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import { config, getEnvStatus, getOrgName, getProjectName } from "./config.js";
 import { CsvFormatError, MAX_UPLOAD_BYTES, parseTestCases, validateUpload } from "./csv.js";
 import { parseContextRequests, repoContextStatus } from "./context.js";
+import { buildDiagnostics } from "./diagnostics.js";
 import { diffTestCases } from "./diff.js";
 import type { FetchPage } from "./fetchPage.js";
 import {
@@ -20,6 +21,7 @@ import {
   listRuns,
   readCsvText,
   readEvents,
+  readLog,
   readMeta,
   removeUploadFile,
   saveUpload,
@@ -179,6 +181,32 @@ export const buildApp = async (options: { fetchPage?: FetchPage } = {}): Promise
       .header("content-type", "text/csv; charset=utf-8")
       .header("content-disposition", `attachment; filename="tc_${id}.csv"`)
       .send(csvText); // keeps the UTF-8 BOM so Excel shows • and — correctly
+  });
+
+  // The raw output of the run (secrets removed when it was written). ?tail=N returns only the last N lines.
+  app.get<{ Params: { id: string }; Querystring: { tail?: string; download?: string } }>("/api/runs/:id/log", async (request, reply) => {
+    const { id } = request.params;
+    if (!isRunId(id)) throw new ValidationError("Invalid run id.");
+    const tail = request.query.tail === undefined ? undefined : Number(request.query.tail);
+    if (tail !== undefined && (!Number.isInteger(tail) || tail <= 0 || tail > 5000)) {
+      throw new ValidationError("tail must be a whole number between 1 and 5000.");
+    }
+    const text = await readLog(id, { tailLines: tail });
+    if (text === null) throw new NotFoundError("No log was saved for this run.");
+    reply.header("content-type", "text/plain; charset=utf-8");
+    if (request.query.download === "1") reply.header("content-disposition", `attachment; filename="${id}.log"`);
+    return reply.send(text);
+  });
+
+  app.get<RunParams>("/api/runs/:id/diagnostics", async (request, reply) => {
+    const { id } = request.params;
+    if (!isRunId(id)) throw new ValidationError("Invalid run id.");
+    const text = await buildDiagnostics(id);
+    if (text === null) throw new NotFoundError("Unknown run.");
+    return reply
+      .header("content-type", "text/plain; charset=utf-8")
+      .header("content-disposition", `attachment; filename="${id}-diagnostics.txt"`)
+      .send(text);
   });
 
   app.post<RunParams>("/api/runs/:id/cancel", async (request) => {

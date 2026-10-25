@@ -56,6 +56,7 @@ type RunMeta = {
   parentRunId?: string;
   resultText?: string;
   errorMessage?: string;
+  errorHint?: { title: string; steps: string[] };
   hasCsv?: boolean;
   testCaseCount?: number;
   durationMs?: number | null;
@@ -135,6 +136,15 @@ const pushProgressBar = byId<HTMLProgressElement>("push-progress-bar");
 const pushProgressLabel = byId("push-progress-label");
 const stepsList = byId("steps");
 const notesList = byId("notes");
+const logDetails = byId<HTMLDetailsElement>("log-details");
+const logView = byId("log-view");
+const logRefreshButton = byId<HTMLButtonElement>("log-refresh");
+const logDownload = byId<HTMLAnchorElement>("log-download");
+const diagnosticsDownload = byId<HTMLAnchorElement>("diagnostics-download");
+const resultsLogLink = byId<HTMLAnchorElement>("results-log-link");
+const resultsDiagnosticsLink = byId<HTMLAnchorElement>("results-diagnostics-link");
+const pushLogLink = byId<HTMLAnchorElement>("push-log-link");
+const pushDiagnosticsLink = byId<HTMLAnchorElement>("push-diagnostics-link");
 const resultsSection = byId("results-section");
 const summaryText = byId("summary");
 const filterType = byId<HTMLSelectElement>("filter-type");
@@ -172,6 +182,34 @@ let stream: EventSource | null = null;
 const showError = (message: string | null): void => {
   errorBanner.hidden = message === null;
   errorBanner.textContent = message ?? "";
+};
+
+const logUrl = (runId: string): string => `/api/runs/${runId}/log?download=1`;
+const diagnosticsUrl = (runId: string): string => `/api/runs/${runId}/diagnostics`;
+
+// A failed run: say what is likely wrong and what to try, keep the raw reason one click away, and offer the log.
+const showFailure = (runId: string, meta: RunMeta, fallback: string): void => {
+  const raw = meta.errorMessage ?? fallback;
+  const hint = meta.errorHint;
+  const body: Node[] = hint
+    ? [
+        h("strong", { class: "error-title", "data-testid": "error-title" }, hint.title),
+        h("ul", { class: "error-steps", "data-testid": "error-steps" }, ...hint.steps.map((step) => h("li", {}, step))),
+        h("details", { class: "error-details" }, h("summary", {}, "Technical details"), h("pre", { class: "raw", "data-testid": "error-raw" }, raw)),
+      ]
+    : [h("p", { "data-testid": "error-raw" }, raw)];
+  body.push(
+    h(
+      "p",
+      { class: "error-links" },
+      "Need help? ",
+      h("a", { href: logUrl(runId), download: "", "data-testid": "error-log-link" }, "Download full log"),
+      " · ",
+      h("a", { href: diagnosticsUrl(runId), download: "", "data-testid": "error-diagnostics-link" }, "Download diagnostics"),
+    ),
+  );
+  errorBanner.replaceChildren(...body);
+  errorBanner.hidden = false;
 };
 
 const setRunning = (running: boolean): void => {
@@ -478,13 +516,30 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
   resultsSection.hidden = false;
 };
 
+// Only the end of the log is shown here; the download has all of it.
+const loadLog = async (): Promise<void> => {
+  const runId = currentRunId;
+  if (!runId) return;
+  logView.textContent = "Loading…";
+  try {
+    const response = await fetch(`/api/runs/${runId}/log?tail=300`);
+    if (runId !== currentRunId) return; // another run took over while this was loading
+    logView.textContent = response.ok ? await response.text() : "No log has been saved for this run yet.";
+  } catch {
+    logView.textContent = "The log could not be loaded.";
+  }
+  logView.scrollTop = logView.scrollHeight;
+};
+
 const loadRun = async (runId: string): Promise<RunMeta> => {
   const { meta, testCases, source } = await api<{ meta: RunMeta; testCases: TestCase[]; source: Source | null }>(`/api/runs/${runId}`);
+  resultsLogLink.href = logUrl(runId);
+  resultsDiagnosticsLink.href = diagnosticsUrl(runId);
   if (meta.kind === "generate" && meta.status === "done") {
     renderResults(meta, testCases, source ?? "original");
   } else if (meta.status === "failed" || meta.status === "cancelled") {
     resultsSection.hidden = true;
-    showError(meta.errorMessage ?? `The run ${meta.status}.`);
+    showFailure(runId, meta, `The run ${meta.status}.`);
   }
   return meta;
 };
@@ -544,6 +599,9 @@ const startGenerate = async (): Promise<void> => {
 
 const watchGenerate = async (runId: string, expectedSteps: number | null, startedAtMs: number): Promise<void> => {
   currentRunId = runId;
+  logDownload.href = logUrl(runId);
+  diagnosticsDownload.href = diagnosticsUrl(runId);
+  logView.textContent = "";
   stepsList.replaceChildren();
   notesList.replaceChildren();
   resultsSection.hidden = true;
@@ -555,12 +613,18 @@ const watchGenerate = async (runId: string, expectedSteps: number | null, starte
     await follow(runId, stepsList, notesList, (event) => tracker.onStep(event));
     const meta = await loadRun(runId);
     tracker.finish(toOutcome(meta.status));
+    if (logDetails.open) void loadLog(); // the viewer was open while the run went on: show the end of it
   } finally {
     tracker.finish("failed"); // no-op when already finished; covers an exception on the way
     setRunning(false);
     void refreshHistory();
   }
 };
+
+logDetails.addEventListener("toggle", () => {
+  if (logDetails.open) void loadLog();
+});
+logRefreshButton.addEventListener("click", () => void loadLog());
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -641,6 +705,8 @@ const doPush = async (runId: string, typedProject: string): Promise<void> => {
     method: "POST",
     body: { confirm: true, expectedCount: currentTestCases.length, project: typedProject },
   });
+  pushLogLink.href = logUrl(pushRunId);
+  pushDiagnosticsLink.href = diagnosticsUrl(pushRunId);
   pushSteps.replaceChildren();
   pushSummary.textContent = "";
   pushRaw.textContent = "";
@@ -651,7 +717,7 @@ const doPush = async (runId: string, typedProject: string): Promise<void> => {
     await follow(pushRunId, pushSteps, null, (event) => tracker.onStep(event));
     const { meta } = await api<{ meta: RunMeta }>(`/api/runs/${pushRunId}`);
     tracker.finish(toOutcome(meta.status));
-    if (meta.status !== "done") showError(meta.errorMessage ?? `The push ${meta.status}.`);
+    if (meta.status !== "done") showFailure(pushRunId, meta, `The push ${meta.status}.`);
     const result = meta.push;
     const pushed = meta.pushSource === "uploaded" ? "Pushed your uploaded file — " : "";
     pushSummary.textContent = result

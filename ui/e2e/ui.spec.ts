@@ -222,4 +222,47 @@ test.describe("test case generator UI", () => {
     await expect(generator.pushProgressLabel).toContainText("Finished in");
     await expect(generator.pushProgressBar).toHaveAttribute("value", "1");
   });
+
+  test("shows the full log of a run and offers it, with the diagnostics, as downloads", async () => {
+    await generator.generateAndWaitForResults();
+
+    // The viewer shows the end of the log; the download has all of it, including the first line.
+    await generator.openLog();
+    await expect(generator.logView).toContainText("finished, exit code 0");
+
+    const log = await generator.textOf(generator.logDownload);
+    expect(log).toContain("started: claude -p /generate-test-cases --pbis 2,3");
+    expect(log).toContain('"type":"result"');
+    const diagnostics = await generator.textOf(generator.diagnosticsDownload);
+    expect(diagnostics).toContain("ADO_PAT_B64: set");
+    expect(diagnostics).toContain("== Full log ==");
+
+    // The same two downloads stay available from the review, for a run opened later from the history.
+    expect(await generator.textOf(generator.resultsLogLink)).toContain("finished, exit code 0");
+  });
+
+  test("explains an Azure DevOps connection failure in plain words and keeps the raw reason", async ({ page }) => {
+    await generator.generate("99");
+
+    await expect(generator.errorTitle).toHaveText("Couldn't connect to Azure DevOps", { timeout: 20_000 });
+    await expect(generator.errorSteps).toContainText("ADO_PAT_B64");
+    // The raw reason is folded away until asked for.
+    await expect(generator.errorRaw).toBeHidden();
+    await page.getByText("Technical details").click();
+    await expect(generator.errorRaw).toContainText("no CSV file was found");
+
+    expect(await generator.textOf(generator.errorLogLink)).toContain("CONNECT_TIMEOUT");
+    expect(await generator.textOf(generator.errorDiagnosticsLink)).toContain("likely cause: Couldn't connect to Azure DevOps");
+  });
+
+  test("keeps the line breaks and the table in Claude's notes", async ({ page }) => {
+    await generator.generate("99");
+    await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });
+
+    await page.getByText("Claude's notes", { exact: true }).click();
+    const note = generator.notes.first();
+    await expect(note).toContainText("| Type | Count |");
+    await expect(note).toHaveCSS("white-space", "pre-wrap");
+    expect(await note.innerText()).toContain("\n|---|---|\n");
+  });
 });

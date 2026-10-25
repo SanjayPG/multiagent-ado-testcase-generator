@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import type { ContextUsed } from "./context.js";
 import type { ChangeSummary } from "./diff.js";
 import type { RunEvent } from "./events.js";
+import type { ErrorHint } from "./failure.js";
 import { isRunId } from "./validate.js";
 
 export type RunKind = "generate" | "push";
@@ -32,6 +33,7 @@ export type RunMeta = {
   parentRunId?: string; // for a push: the generate run whose CSV was pushed
   resultText?: string;
   errorMessage?: string;
+  errorHint?: ErrorHint; // a plain-language cause and next steps, when the failure is one we recognise
   hasCsv?: boolean;
   testCaseCount?: number;
   durationMs?: number | null;
@@ -59,6 +61,7 @@ export const csvPath = (id: string): string => path.join(runDir(id), "tc.csv");
 export const uploadPath = (id: string): string => path.join(runDir(id), "upload.csv");
 const metaPath = (id: string): string => path.join(runDir(id), "meta.json");
 const eventsPath = (id: string): string => path.join(runDir(id), "events.jsonl");
+const logPath = (id: string): string => path.join(runDir(id), "run.log");
 
 // Not atomic on purpose: renaming over a file a reader has open fails with EPERM on Windows.
 // readMeta retries instead, so a poll that lands mid-write just waits a few milliseconds.
@@ -94,6 +97,33 @@ export const updateMeta = async (id: string, patch: Partial<RunMeta>): Promise<R
 
 export const appendEvent = async (id: string, event: StoredEvent): Promise<void> => {
   await appendFile(eventsPath(id), `${JSON.stringify(event)}\n`);
+};
+
+// Raw output of the claude process (secrets already removed by the caller), kept so a failure can be investigated.
+export const MAX_LOG_BYTES = 5 * 1024 * 1024;
+const MAX_TAIL_CHARS = 200_000;
+
+export const appendLog = async (id: string, text: string): Promise<void> => {
+  await appendFile(logPath(id), text);
+};
+
+// tailLines keeps the page light: only the end of a long log, and never more than MAX_TAIL_CHARS of it.
+export const readLog = async (id: string, options: { tailLines?: number } = {}): Promise<string | null> => {
+  let text: string;
+  try {
+    text = await readFile(logPath(id), "utf8");
+  } catch {
+    return null;
+  }
+  if (options.tailLines === undefined) return text;
+  const lines = text.split("\n");
+  if (lines[lines.length - 1] === "") lines.pop(); // the file ends with a newline
+  const tail = lines.slice(-options.tailLines).join("\n");
+  if (tail.length <= MAX_TAIL_CHARS) return tail;
+  // Start at a line boundary, so the view never begins in the middle of a line.
+  const cut = tail.slice(-MAX_TAIL_CHARS);
+  const firstBreak = cut.indexOf("\n");
+  return firstBreak >= 0 ? cut.slice(firstBreak + 1) : cut;
 };
 
 export const readEvents = async (id: string): Promise<StoredEvent[]> => {

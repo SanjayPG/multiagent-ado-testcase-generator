@@ -34,6 +34,17 @@ export class GeneratorPage {
   readonly uploadWarnings: Locator;
   readonly removeUploadButton: Locator;
   readonly history: Locator;
+  readonly notes: Locator;
+  readonly logDetails: Locator;
+  readonly logView: Locator;
+  readonly logDownload: Locator;
+  readonly diagnosticsDownload: Locator;
+  readonly resultsLogLink: Locator;
+  readonly errorTitle: Locator;
+  readonly errorSteps: Locator;
+  readonly errorRaw: Locator;
+  readonly errorLogLink: Locator;
+  readonly errorDiagnosticsLink: Locator;
 
   constructor(private readonly page: Page) {
     this.projectName = page.getByTestId("project-name");
@@ -66,6 +77,17 @@ export class GeneratorPage {
     this.uploadWarnings = page.getByTestId("upload-warnings");
     this.removeUploadButton = page.getByRole("button", { name: /Remove upload/ });
     this.history = page.getByTestId("history-item");
+    this.notes = page.getByTestId("notes").getByRole("listitem");
+    this.logDetails = page.getByTestId("log-details");
+    this.logView = page.getByTestId("log-view");
+    this.logDownload = page.getByTestId("log-download");
+    this.diagnosticsDownload = page.getByTestId("diagnostics-download");
+    this.resultsLogLink = page.getByTestId("results-log-link");
+    this.errorTitle = page.getByTestId("error-title");
+    this.errorSteps = page.getByTestId("error-steps");
+    this.errorRaw = page.getByTestId("error-raw");
+    this.errorLogLink = page.getByTestId("error-log-link");
+    this.errorDiagnosticsLink = page.getByTestId("error-diagnostics-link");
   }
 
   goto = async (): Promise<void> => {
@@ -83,7 +105,19 @@ export class GeneratorPage {
     await expect(this.summary).toContainText("test cases", { timeout: 20_000 });
   };
 
-  testCaseByTitle = (text: string): Locator => this.testCases.filter({ hasText: text });
+  // The log viewer is a <details>; opening it loads the end of the log.
+  openLog = async (): Promise<void> => {
+    await this.logDetails.getByText("Full log", { exact: true }).click();
+  };
+
+  // The text a download link serves, read the way the browser would fetch it.
+  textOf = async (link: Locator): Promise<string> => {
+    const response = await this.page.request.get((await link.getAttribute("href")) ?? "");
+    expect(response.ok()).toBe(true);
+    return response.text();
+  };
+
+  testCaseByTitle =(text: string): Locator => this.testCases.filter({ hasText: text });
 
   contextInclude = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}`);
   contextOptions = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-options`);

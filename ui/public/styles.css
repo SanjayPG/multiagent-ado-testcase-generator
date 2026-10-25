@@ -147,7 +147,23 @@ progress[data-state="failed"] { accent-color: var(--danger); }
 .steps li[data-state="running"]::before { content: "⏳"; }
 .steps li[data-state="done"]::before { content: "✓"; color: var(--ok); font-weight: bold; }
 .steps li[data-state="failed"]::before { content: "✕"; color: var(--danger); font-weight: bold; }
-.notes li { padding: 4px 0; color: var(--muted); font-size: 0.9rem; }
+/* Notes are Claude's own words, often a list or a table: keep their line breaks. */
+.notes li { padding: 4px 0; color: var(--muted); font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.log-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.log-tools button, .log-tools a.button { padding: 4px 12px; font-size: 0.9rem; }
+.log-view { max-height: 22em; overflow: auto; margin: 0; font-size: 0.8rem; }
+.run-tools { margin: 12px 0 0; }
+.run-tools a { color: var(--muted); text-underline-offset: 3px; }
+.run-tools a:hover { color: var(--accent); }
+
+/* A recognised failure: a title, what to try, and the raw reason folded away. */
+.banner-error .error-title { display: block; margin-bottom: 4px; }
+.banner-error .error-steps { margin: 4px 0 8px; padding-left: 1.3em; }
+.banner-error .error-details { margin: 4px 0 8px; }
+.banner-error .error-details pre { max-height: 14em; overflow: auto; margin: 4px 0 0; font-size: 0.85rem; background: var(--bg); }
+.banner-error .error-links { margin: 8px 0 0; }
+.banner-error .error-links a { color: inherit; text-underline-offset: 3px; }
 details > summary { cursor: pointer; margin: 8px 0; color: var(--muted); }
 
 .summary { color: var(--muted); margin: 0 0 8px; }
