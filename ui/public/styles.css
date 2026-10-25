@@ -43,21 +43,21 @@ main { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
 /* Navy band in both colour schemes; centred like a hero, while the page below stays left-aligned. */
 .page-header {
   text-align: center;
-  padding: 26px 16px 24px;
+  padding: 16px 16px 16px;
   background: linear-gradient(135deg, #00093a 0%, #0b1f6b 100%);
   border-bottom: 4px solid var(--brand-orange);
   color: #fff;
 }
-h1 { margin: 0; font-size: 2rem; line-height: 1.2; }
+h1 { margin: 0; font-size: 1.8rem; line-height: 1.2; }
 h1 .accent { color: var(--brand-orange); }
 .page-header .subtitle { color: #c9d3ff; }
 
 /* Claude Code -> MCP -> Azure DevOps. The logos are light images, so each sits in a rounded white tile. */
-.flow { display: flex; align-items: flex-start; justify-content: center; gap: 12px; margin: 0 0 14px; }
-.node { margin: 0; width: 100px; }
-.node img { display: block; width: 84px; height: 84px; margin: 0 auto; object-fit: contain; background: #fff; border-radius: 18px; }
-.node figcaption { margin-top: 6px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
-.link { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 110px; padding-top: 22px; }
+.flow { display: flex; align-items: flex-start; justify-content: center; gap: 12px; margin: 0 0 10px; }
+.node { margin: 0; width: 90px; }
+.node img { display: block; width: 64px; height: 64px; margin: 0 auto; object-fit: contain; background: #fff; border-radius: 14px; }
+.node figcaption { margin-top: 4px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
+.link { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 110px; padding-top: 4px; }
 .link .tag { padding: 1px 10px; border-radius: 999px; border: 1px solid var(--brand-orange); color: var(--brand-orange); font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; }
 .link .line {
   position: relative; width: 100%; height: 2px;
@@ -65,7 +65,10 @@ h1 .accent { color: var(--brand-orange); }
   background-size: 14px 2px;
   animation: flow-dash 0.9s linear infinite;
 }
-.link .line::after { content: ""; position: absolute; right: -2px; top: -4px; border: 5px solid transparent; border-left: 8px solid var(--brand-orange); }
+/* Both heads: the tool reads PBIs from Azure DevOps and pushes test cases back. */
+.link .line::before, .link .line::after { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
+.link .line::after { right: -2px; border-left: 8px solid var(--brand-orange); }
+.link .line::before { left: -2px; border-right: 8px solid var(--brand-orange); }
 @keyframes flow-dash { to { background-position: 14px 0; } }
 @media (prefers-reduced-motion: reduce) { .link .line { animation: none; } }
 .page-header strong { padding: 2px 10px; border-radius: 999px; background: rgba(255, 106, 0, 0.18); color: #ffd2b0; }
@@ -87,8 +90,10 @@ input[type="text"], input[type="search"], select {
 #pbi-input { padding: 14px 16px; font-size: 1.25rem; }
 input[type="checkbox"], input[type="radio"] { width: 1.2em; height: 1.2em; accent-color: var(--accent); vertical-align: middle; }
 
-.card { margin-top: 24px; padding: 4px 20px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 9, 58, 0.08); }
-.card h2 { margin-top: 16px; }
+.card { margin-top: 18px; padding: 4px 20px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 9, 58, 0.08); }
+.card h2 { margin-top: 12px; }
+/* Anything that already has a surface background needs a different one inside a card, or it blends in. */
+.card .testcases details, .card .raw, .card .upload-panel { background: var(--bg); }
 .more summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
 .more p { margin: 6px 0 0; }
 
