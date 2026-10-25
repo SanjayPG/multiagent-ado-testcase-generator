@@ -291,7 +291,7 @@ const renderTestCase = (testCase: TestCase): HTMLElement => {
       "summary",
       {},
       h("span", { class: "tc-title" }, testCase.title),
-      h("span", { class: "badge" }, testCase.testType),
+      h("span", { class: "badge", "data-type": testCase.testType }, testCase.testType),
       h("span", { class: "badge" }, testCase.pbiId === null ? "PBI ?" : `PBI ${testCase.pbiId}`),
       h("span", { class: "badge" }, `P${testCase.priority}`),
       h("span", { class: "badge" }, `${testCase.steps.length} ${testCase.steps.length === 1 ? "step" : "steps"}`),
