@@ -384,6 +384,48 @@ test.describe("test case generator UI", () => {
     await expect(generator.summary).toBeVisible();
   });
 
+  test("folds the Review by hand, and new results open it again", async () => {
+    await generator.generateAndWaitForResults();
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", true);
+
+    await generator.reviewToggle.click();
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", false);
+    await expect(generator.testCases.first()).toBeHidden();
+    await generator.reviewToggle.click();
+    await expect(generator.testCases.first()).toBeVisible();
+
+    await generator.reviewToggle.click(); // fold it, then run again: the new results must not stay hidden
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    await generator.generate("2, 3");
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", true, { timeout: 20_000 });
+    await expect(generator.testCases.first()).toBeVisible();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+  });
+
+  test("clears the recent runs after asking, and puts the screen back to a fresh start", async ({ page }) => {
+    await generator.generateAndWaitForResults();
+    await expect(generator.history.first()).toBeVisible();
+
+    await generator.clearRunsButton.click();
+    await expect(generator.clearDialog).toBeVisible();
+    await generator.clearCancelButton.click();
+    await expect(generator.clearDialog).toBeHidden();
+    await expect(generator.history.first()).toBeVisible(); // cancelling keeps everything
+
+    await generator.clearRunsButton.click();
+    await generator.clearConfirmButton.click();
+    await expect(page.getByText("No runs yet.")).toBeVisible();
+    await expect(generator.clearRunsButton).toBeHidden();
+    await expect(generator.testCases).toHaveCount(0);
+    await expect(generator.progressSection).toBeHidden();
+    await expect(generator.errorBanner).toBeHidden();
+
+    // A new run works as normal afterwards.
+    await generator.generateAndWaitForResults();
+    await expect(generator.history.first()).toBeVisible();
+    await expect(generator.clearRunsButton).toBeVisible();
+  });
+
   test("starting a run opens Progress again if it was folded", async () => {
     await generator.generateAndWaitForResults();
     await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });

@@ -258,3 +258,6 @@ dialog h2 { margin-top: 0; }
 @media (prefers-color-scheme: dark) { .badge-regression { background: #2a2150; color: #c9b8ff; border-color: #5a47a8; } }
 .filters .check { display: flex; align-items: center; gap: 8px; align-self: end; margin: 0 0 8px; font-weight: 600; }
 .filters .check:has(input:disabled) { opacity: 0.6; }
+
+.history-tools { margin: 0 0 8px; }
+.history-tools button { padding: 4px 12px; font-size: 0.9rem; }

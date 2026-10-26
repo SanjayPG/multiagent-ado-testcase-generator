@@ -91,7 +91,8 @@
       </section>
 
       <section class="card" id="results-section" aria-labelledby="results-heading" hidden>
-        <h2 id="results-heading">2. Review</h2>
+        <details class="collapse" id="review-collapse" data-testid="review-collapse" open>
+        <summary data-testid="review-toggle"><h2 id="results-heading">2. Review</h2></summary>
         <p id="summary" class="summary" data-testid="summary"></p>
         <p id="context-used" class="summary" data-testid="context-used"></p>
         <p id="skipped" class="banner banner-warning" role="status" data-testid="skipped" hidden></p>
@@ -138,6 +139,7 @@
           <a id="results-log-link" data-testid="results-log-link" href="#" download>Download full log</a> ·
           <a id="results-diagnostics-link" data-testid="results-diagnostics-link" href="#" download>Download diagnostics</a>
         </p>
+        </details>
       </section>
 
       <section class="card" id="push-section" aria-labelledby="push-heading" hidden>
@@ -158,6 +160,9 @@
       <section class="card" aria-labelledby="history-heading">
         <details class="collapse" data-testid="history-collapse" open>
         <summary data-testid="history-toggle"><h2 id="history-heading">Recent runs</h2></summary>
+        <div class="history-tools">
+          <button type="button" id="clear-runs-button" data-testid="clear-runs-button" class="secondary" hidden>Clear list…</button>
+        </div>
         <ul id="history" class="history" data-testid="history"></ul>
         </details>
       </section>
@@ -175,6 +180,20 @@
         </a>
       </p>
     </footer>
+
+    <dialog id="clear-dialog" data-testid="clear-dialog" aria-labelledby="clear-dialog-title">
+      <form id="clear-form" method="dialog">
+        <h2 id="clear-dialog-title">Clear the recent runs?</h2>
+        <p data-testid="clear-dialog-text">
+          This deletes every saved run on this computer, with its CSV and its log, and clears the screen. Nothing in Azure
+          DevOps is changed.
+        </p>
+        <div class="actions">
+          <button type="submit" id="clear-confirm-button" data-testid="clear-confirm-button" class="danger">Clear runs</button>
+          <button type="button" id="clear-cancel-button" data-testid="clear-cancel-button" class="secondary">Cancel</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="push-dialog" data-testid="push-dialog" aria-labelledby="push-dialog-title">
       <form id="push-form" method="dialog">

@@ -135,6 +135,11 @@ const generateButton = byId<HTMLButtonElement>("generate-button");
 const cancelButton = byId<HTMLButtonElement>("cancel-button");
 const progressSection = byId("progress-section");
 const generateCollapse = byId<HTMLDetailsElement>("generate-collapse");
+const reviewCollapse = byId<HTMLDetailsElement>("review-collapse");
+const clearRunsButton = byId<HTMLButtonElement>("clear-runs-button");
+const clearDialog = byId<HTMLDialogElement>("clear-dialog");
+const clearForm = byId<HTMLFormElement>("clear-form");
+const clearCancelButton = byId<HTMLButtonElement>("clear-cancel-button");
 const progressCollapse = byId<HTMLDetailsElement>("progress-collapse");
 const progressBar = byId<HTMLProgressElement>("progress-bar");
 const progressLabelEl = byId("progress-label");
@@ -201,7 +206,9 @@ const showError = (message: string | null, place: ErrorPlace = "generate"): void
   errorBanner.className = "banner banner-error";
   errorBanner.textContent = message ?? "";
   if (message !== null) {
-    if (place === "generate") generateCollapse.open = true; // an error must never sit inside a folded card
+    // An error must never sit inside a folded card.
+    if (place === "generate") generateCollapse.open = true;
+    else reviewCollapse.open = true;
     errorBanner.scrollIntoView({ block: "nearest" });
   }
 };
@@ -240,6 +247,7 @@ const showFailure = (runId: string, meta: RunMeta, fallback: string, place: Erro
   errorBanner.className = hint?.tone === "warning" ? "banner banner-warning" : "banner banner-error";
   errorBanner.hidden = false;
   if (place === "generate") generateCollapse.open = true;
+  else reviewCollapse.open = true;
   errorBanner.scrollIntoView({ block: "nearest" });
 };
 
@@ -580,6 +588,7 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
   currentRunId = meta.id;
   currentTestCases = testCases;
   currentSource = source;
+  reviewCollapse.open = true; // new results are always shown, even if the last ones were folded by hand
   renderUpload(meta);
   const steps = testCases.reduce((sum, testCase) => sum + testCase.steps.length, 0);
   const byType = Object.entries(countBy(testCases.map((testCase) => testCase.testType)))
@@ -655,6 +664,7 @@ const refreshHistory = async (): Promise<void> => {
       return item;
     }),
   );
+  clearRunsButton.hidden = runs.length === 0;
   if (runs.length === 0) {
     historyList.append(
       h("li", { class: "hint empty" }, h("strong", {}, "No runs yet."), h("span", {}, "Enter PBI ids above and click Generate test cases to start.")),
@@ -713,6 +723,32 @@ const watchGenerate = async (runId: string, expectedSteps: number | null, starte
     void refreshHistory();
   }
 };
+
+// ---------- clear the recent runs ----------
+// Deletes the saved runs on the server, then puts the screen back to how it looks on a fresh start.
+const clearRuns = async (): Promise<void> => {
+  await api<{ removed: number }>("/api/runs", { method: "DELETE" });
+  stream?.close();
+  currentRunId = null;
+  currentTestCases = [];
+  progressSection.hidden = true;
+  resultsSection.hidden = true;
+  pushSection.hidden = true;
+  stepsList.replaceChildren();
+  notesList.replaceChildren();
+  testCasesBox.replaceChildren();
+  logView.textContent = "";
+  showError(null);
+  await refreshHistory();
+};
+
+clearRunsButton.addEventListener("click", () => clearDialog.showModal());
+clearCancelButton.addEventListener("click", () => clearDialog.close());
+clearForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  clearDialog.close();
+  void clearRuns().catch((error) => showError(errorText(error)));
+});
 
 logDetails.addEventListener("toggle", () => {
   if (logDetails.open) void loadLog();

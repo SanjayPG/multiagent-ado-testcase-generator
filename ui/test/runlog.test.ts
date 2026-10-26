@@ -112,6 +112,50 @@ describe("the saved log", () => {
   });
 });
 
+describe("clearing the saved runs", () => {
+  const clear = () => app.inject({ method: "DELETE", url: "/api/runs", headers: HOST });
+
+  it("refuses a request from another origin", async () => {
+    const response = await app.inject({ method: "DELETE", url: "/api/runs", headers: { ...HOST, origin: "https://evil.example" } });
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("refuses while a run is in progress, and leaves that run alone", async () => {
+    process.env.FAKE_CLAUDE_MODE = "hang";
+    const runId = await startRun([2]);
+    const response = await clear();
+    expect(response.statusCode).toBe(409);
+    expect(existsSync(path.join(runsDir, runId))).toBe(true);
+
+    await app.inject({ method: "POST", url: `/api/runs/${runId}/cancel`, headers: HOST, payload: {} });
+    await waitForStatus(runId, ["cancelled"]);
+  });
+
+  it("deletes every saved run and nothing that is not a run", async () => {
+    const first = await startRun([2, 3]);
+    await waitForStatus(first, ["done"]);
+    const second = await startRun([2, 3]);
+    await waitForStatus(second, ["done"]);
+    const stray = path.join(runsDir, "Not-A-Run");
+    mkdirSync(stray, { recursive: true });
+    writeFileSync(path.join(stray, "keep.txt"), "x");
+
+    const response = await clear();
+    expect(response.statusCode).toBe(200);
+    expect(response.json().removed).toBeGreaterThanOrEqual(2);
+    expect((await get("/api/runs")).json().runs).toEqual([]);
+    expect((await get(`/api/runs/${first}`)).statusCode).toBe(404);
+    expect(existsSync(path.join(runsDir, first))).toBe(false);
+    expect(existsSync(path.join(stray, "keep.txt"))).toBe(true);
+  });
+
+  it("is fine when there is nothing to clear", async () => {
+    const response = await clear();
+    expect(response.statusCode).toBe(200);
+    expect(response.json().removed).toBe(0);
+  });
+});
+
 describe("the tail of a very long log", () => {
   it("starts at a whole line, never in the middle of one", async () => {
     const id = "run-20260101-cafe01";

@@ -17,6 +17,7 @@ import {
   subscribe,
 } from "./runner.js";
 import {
+  clearRuns,
   effectiveCsv,
   listRuns,
   readCsvText,
@@ -107,6 +108,12 @@ export const buildApp = async (options: { fetchPage?: FetchPage } = {}): Promise
   app.get("/api/context", async () => ({ files: await repoContextStatus() }));
 
   app.get("/api/runs", async () => ({ runs: await listRuns() }));
+
+  // Clears the saved runs from this computer. Nothing in Azure DevOps is touched, and a run in progress is never removed.
+  app.delete("/api/runs", async () => {
+    if (getActiveRunId() !== null) throw new BusyError("Wait for the current run to finish before clearing the list.");
+    return { removed: await clearRuns() };
+  });
 
   app.post("/api/runs", async (request, reply) => {
     const body = (request.body ?? {}) as { pbis?: unknown; context?: unknown };
