@@ -1,3 +1,4 @@
+import { hasRegressionTag, matchedScript } from "./regression.js";
 import { computeProgress, progressLabel, type Outcome, type StepState as ProgressState } from "./progress.js";
 
 // Browser code. All text that comes from the pipeline or from Azure DevOps is inserted with textContent / text
@@ -155,6 +156,8 @@ const summaryText = byId("summary");
 const filterType = byId<HTMLSelectElement>("filter-type");
 const filterPbi = byId<HTMLSelectElement>("filter-pbi");
 const filterText = byId<HTMLInputElement>("filter-text");
+const filterRegression = byId<HTMLInputElement>("filter-regression");
+const filterRegressionCount = byId("filter-regression-count");
 const testCasesBox = byId("testcases");
 const downloadLink = byId<HTMLAnchorElement>("download-link");
 const uploadInput = byId<HTMLInputElement>("upload-input");
@@ -364,6 +367,20 @@ const renderTestCase = (testCase: TestCase): HTMLElement => {
       {},
       h("span", { class: "tc-title" }, testCase.title),
       h("span", { class: "badge", "data-type": testCase.testType }, testCase.testType),
+      ...(hasRegressionTag(testCase.tags)
+        ? [
+            h(
+              "span",
+              {
+                class: "badge badge-regression",
+                "data-testid": "regression-badge",
+                // The script the generator says this matches, so a reviewer can check the match.
+                title: matchedScript(testCase.description) ? `Matches ${matchedScript(testCase.description)}` : "Tagged regression",
+              },
+              "regression",
+            ),
+          ]
+        : []),
       h("span", { class: "badge" }, testCase.pbiId === null ? "PBI ?" : `PBI ${testCase.pbiId}`),
       h("span", { class: "badge", "data-priority": String(testCase.priority) }, `P${testCase.priority}`),
       h("span", { class: "badge" }, `${testCase.steps.length} ${testCase.steps.length === 1 ? "step" : "steps"}`),
@@ -379,6 +396,7 @@ const renderList = (): void => {
   const visible = currentTestCases.filter((testCase) => {
     if (type && testCase.testType !== type) return false;
     if (pbi && String(testCase.pbiId) !== pbi) return false;
+    if (filterRegression.checked && !hasRegressionTag(testCase.tags)) return false;
     if (!needle) return true;
     const haystack = [testCase.title, ...testCase.steps.flatMap((step) => [step.action, step.expected])].join(" ").toLowerCase();
     return haystack.includes(needle);
@@ -579,6 +597,10 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
   fillSelect(filterType, Object.keys(countBy(testCases.map((testCase) => testCase.testType))));
   fillSelect(filterPbi, Object.keys(countBy(testCases.map((testCase) => String(testCase.pbiId)))));
   filterText.value = "";
+  const regressionCount = testCases.filter((testCase) => hasRegressionTag(testCase.tags)).length;
+  filterRegression.checked = false;
+  filterRegression.disabled = regressionCount === 0; // nothing to filter on when no test case carries the tag
+  filterRegressionCount.textContent = `(${regressionCount})`;
   renderList();
 
   downloadLink.href = `/api/runs/${meta.id}/csv`;
@@ -707,7 +729,7 @@ cancelButton.addEventListener("click", () => {
   api(`/api/runs/${currentRunId}/cancel`, { method: "POST", body: {} }).catch((error) => showError(errorText(error)));
 });
 
-[filterType, filterPbi].forEach((control) => control.addEventListener("change", renderList));
+[filterType, filterPbi, filterRegression].forEach((control) => control.addEventListener("change", renderList));
 filterText.addEventListener("input", renderList);
 
 // ---------- upload an edited CSV ----------

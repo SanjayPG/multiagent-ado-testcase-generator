@@ -330,6 +330,26 @@ test.describe("test case generator UI", () => {
     await expect(generator.errorRaw).toContainText("The id probably does not exist");
   });
 
+  test("shows a regression chip on tagged test cases and filters on it", async () => {
+    await generator.generateAndWaitForResults();
+
+    // The recorded run tags four test cases regression; each shows a chip without opening the row.
+    await expect(generator.regressionBadges).toHaveCount(4);
+    await expect(generator.regressionBadges.first()).toHaveAttribute("title", "Tagged regression");
+    await expect(generator.regressionFilter).toBeEnabled();
+    await expect(generator.regressionFilter).toHaveAccessibleName(/Regression only \(4\)/);
+
+    const all = await generator.testCases.count();
+    await generator.regressionFilter.check();
+    await expect(generator.testCases).toHaveCount(4);
+    for (const testCase of await generator.testCases.all()) {
+      await expect(testCase.getByTestId("regression-badge")).toBeVisible();
+    }
+
+    await generator.regressionFilter.uncheck();
+    await expect(generator.testCases).toHaveCount(all);
+  });
+
   test("folds Generate, Progress and Recent runs by hand, and never folds anything by itself", async () => {
     // All three start open.
     await expect(generator.generateCollapse).toHaveJSProperty("open", true);

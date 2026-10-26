@@ -81,7 +81,10 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
    show what happened. Only one run at a time. **Cancel run** stops a stuck one. To save scrolling, click
    the title of **Generate**, **Progress** or **Recent runs** to fold it, and again to open it. Nothing
    folds by itself.
-3. **Review.** Filter by type, PBI, or text. Download the ADO CSV.
+3. **Review.** Filter by type, PBI, or text. Download the ADO CSV. If you gave a regression list, test cases
+   that match one of its scripts carry a violet **regression** chip (hover it to see which script), and
+   **Regression only** shows just those. The match is Claude's judgement from the names you gave it, so
+   treat the chip as a hint to check, not proof of coverage. The test cases are all still written.
 4. **Edited the CSV?** Fix it in Excel (save as *CSV UTF-8*, keep each title starting with
    `[TC-<PBI id>-...]`), upload it back, and check **What changed**. The upload is pushed instead of the
    original; **Remove upload** goes back to the original.

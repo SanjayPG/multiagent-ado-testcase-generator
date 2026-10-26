@@ -252,3 +252,9 @@ dialog h2 { margin-top: 0; }
 .collapse[open] > summary::after { transform: rotate(-135deg); }
 .collapse > summary:hover::after { border-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) { .collapse > summary::after { transition: none; } }
+
+/* Regression: a violet chip, so it never reads as one of the type colours or the orange priority. */
+.badge-regression { background: #efe7ff; color: #4b2a99; border-color: #cdb9ff; }
+@media (prefers-color-scheme: dark) { .badge-regression { background: #2a2150; color: #c9b8ff; border-color: #5a47a8; } }
+.filters .check { display: flex; align-items: center; gap: 8px; align-self: end; margin: 0 0 8px; font-weight: 600; }
+.filters .check:has(input:disabled) { opacity: 0.6; }

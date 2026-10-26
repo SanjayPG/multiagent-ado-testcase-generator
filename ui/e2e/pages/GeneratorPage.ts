@@ -40,6 +40,8 @@ export class GeneratorPage {
   readonly progressToggle: Locator;
   readonly historyCollapse: Locator;
   readonly historyToggle: Locator;
+  readonly regressionBadges: Locator;
+  readonly regressionFilter: Locator;
   readonly notes: Locator;
   readonly logDetails: Locator;
   readonly logView: Locator;
@@ -90,6 +92,8 @@ export class GeneratorPage {
     this.progressToggle = page.getByTestId("progress-toggle");
     this.historyCollapse = page.getByTestId("history-collapse");
     this.historyToggle = page.getByTestId("history-toggle");
+    this.regressionBadges = page.getByTestId("regression-badge");
+    this.regressionFilter = page.getByTestId("filter-regression");
     this.notes = page.getByTestId("notes").getByRole("listitem");
     this.logDetails = page.getByTestId("log-details");
     this.logView = page.getByTestId("log-view");
