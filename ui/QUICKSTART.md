@@ -81,7 +81,8 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
    show what happened. Only one run at a time. **Cancel run** stops a stuck one. To save scrolling, click
    the title of **Generate**, **Progress**, **Review** or **Recent runs** to fold it, and again to open it.
    Nothing folds by itself, and new results always open the Review. The trash icon at the right of a run
-   in Recent runs deletes that one run (its CSV and log) from this computer, after you confirm. It never
+   in Recent runs deletes that one run (its log, and its CSV if it has one) from this computer, after you
+   confirm; the dialog says exactly what goes. The copy in the repo's `output/` folder stays. It never
    touches Azure DevOps, it is refused while a run is going, and if the run was on screen the screen resets.
 3. **Review.** Filter by type, PBI, or text. Download the ADO CSV. If you gave a regression list, test cases
    that match one of its scripts carry a violet **regression** chip (hover it to see which script), and

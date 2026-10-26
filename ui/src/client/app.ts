@@ -139,6 +139,7 @@ const reviewCollapse = byId<HTMLDetailsElement>("review-collapse");
 const deleteDialog = byId<HTMLDialogElement>("delete-dialog");
 const deleteForm = byId<HTMLFormElement>("delete-form");
 const deleteDialogText = byId("delete-dialog-text");
+const deleteDialogDetail = byId("delete-dialog-detail");
 const deleteCancelButton = byId<HTMLButtonElement>("delete-cancel-button");
 const progressCollapse = byId<HTMLDetailsElement>("progress-collapse");
 const progressBar = byId<HTMLProgressElement>("progress-bar");
@@ -668,6 +669,7 @@ const refreshHistory = async (): Promise<void> => {
         remove.addEventListener("click", () => {
           runToDelete = run.id;
           deleteDialogText.textContent = label;
+          deleteDialogDetail.textContent = describeDeletion(run);
           deleteDialog.showModal();
         });
         item.append(remove);
@@ -740,6 +742,13 @@ let runToDelete: string | null = null;
 // A static icon (the Material "delete" shape), so setting innerHTML here is safe.
 const TRASH_ICON =
   '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+
+// Says only what is really deleted: a failed run has no CSV, and the repo's output/ folder is never touched.
+const describeDeletion = (run: RunMeta): string => {
+  const what = run.hasCsv ? (run.upload ? "its CSV, the edited file you uploaded and its log" : "its CSV and its log") : "its log";
+  const kept = run.hasCsv ? " The copy in the repo's output/ folder stays." : "";
+  return `This deletes ${what} from this computer.${kept} Nothing in Azure DevOps is changed.`;
+};
 
 // Deletes the run on the server. If it was the run on screen, the screen goes back to a fresh start.
 const deleteRun = async (id: string): Promise<void> => {

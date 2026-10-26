@@ -420,6 +420,7 @@ test.describe("test case generator UI", () => {
     await generator.deleteRunButtons.nth(1).click();
     await expect(generator.deleteDialog).toBeVisible();
     await expect(generator.deleteDialog).toContainText("generate · done · PBIs 2, 3");
+    await expect(generator.deleteDialog).toContainText("This deletes its CSV and its log from this computer.");
     await generator.deleteCancelButton.click();
     await expect(generator.deleteDialog).toBeHidden();
     await expect(generator.deleteRunButtons).toHaveCount(before + 1);
@@ -436,6 +437,19 @@ test.describe("test case generator UI", () => {
     await expect(generator.deleteRunButtons).toHaveCount(before - 1);
     await expect(generator.testCases).toHaveCount(0);
     await expect(generator.progressSection).toBeHidden();
+  });
+
+  test("tells the truth about what deleting a failed run removes: it has no CSV", async () => {
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true }); // a recent CSV would make this run succeed
+    await generator.generate("99");
+    await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });
+    await expect(generator.cancelButton).toBeHidden();
+
+    await generator.deleteRunButtons.first().click();
+    await expect(generator.deleteDialog).toContainText("generate · failed · PBIs 99");
+    await expect(generator.deleteDialog).toContainText("This deletes its log from this computer.");
+    await expect(generator.deleteDialog).not.toContainText("CSV");
+    await generator.deleteCancelButton.click();
   });
 
   test("starting a run opens Progress again if it was folded", async () => {
