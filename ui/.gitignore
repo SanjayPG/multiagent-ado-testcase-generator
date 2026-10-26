@@ -3,6 +3,7 @@ dist/
 .data/
 public/app.js
 public/progress.js
+public/regression.js
 test-results/
 playwright-report/
 .e2e-sandbox/

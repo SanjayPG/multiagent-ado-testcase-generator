@@ -55,5 +55,6 @@ describe("progressLabel", () => {
     expect(progressLabel(running, 109_000, "done")).toBe("Finished in 1:49");
     expect(progressLabel(running, 30_000, "failed")).toBe("Failed after 0:30");
     expect(progressLabel(running, 12_000, "cancelled")).toBe("Cancelled after 0:12");
+    expect(progressLabel(running, 27_000, "stopped")).toBe("Stopped after 0:27");
   });
 });

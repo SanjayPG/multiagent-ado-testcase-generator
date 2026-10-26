@@ -4,7 +4,9 @@
   --text: #1c2025;
   --muted: #5b6573;
   --border: #d5d9e0;
-  --accent: #1f6feb;
+  --accent: #0b2a8a;
+  --on-accent: #ffffff;
+  --brand-orange: #ff6a00;
   --danger: #c62828;
   --ok: #1a7f37;
   --warn-bg: #fff4d6;
@@ -18,7 +20,8 @@
     --text: #e8ebf0;
     --muted: #9aa5b4;
     --border: #333b46;
-    --accent: #5aa2ff;
+    --accent: #ff7a1a; /* orange on dark, navy on light: one accent per scheme */
+    --on-accent: #00093a;
     --danger: #ff6b6b;
     --ok: #4cc16a;
     --warn-bg: #3a3320;
@@ -35,16 +38,69 @@ body {
   font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-.page-header, main { max-width: 1000px; margin: 0 auto; padding: 0 16px; }
-.page-header { padding-top: 24px; }
-h1 { margin: 0; font-size: 1.6rem; }
+main { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+
+/* Navy band in both colour schemes; centred like a hero, while the page below stays left-aligned. */
+.page-header {
+  text-align: center;
+  padding: 16px 16px 16px;
+  background: linear-gradient(135deg, #00093a 0%, #0b1f6b 100%);
+  border-bottom: 4px solid var(--brand-orange);
+  color: #fff;
+}
+h1 { margin: 0; font-size: 1.8rem; line-height: 1.2; }
+h1 .accent { color: var(--brand-orange); }
+.page-header .subtitle { color: #c9d3ff; }
+
+/* Claude Code -> MCP -> Azure DevOps. The logos are light images, so each sits in a rounded white tile. */
+.flow { display: flex; align-items: flex-start; justify-content: center; gap: 12px; margin: 0 0 10px; }
+.node { margin: 0; width: 90px; }
+.node img { display: block; width: 64px; height: 64px; margin: 0 auto; object-fit: contain; background: #fff; border-radius: 14px; }
+.node figcaption { margin-top: 4px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
+/* Two lanes: test cases go out to Azure DevOps, PBIs come back. The dashes move in each lane's direction. */
+.link { display: flex; flex-direction: column; align-items: stretch; gap: 3px; width: 150px; }
+.lane-label { display: block; color: #ffd2b0; font-size: 0.72rem; letter-spacing: 0.04em; line-height: 1.2; }
+.link .line {
+  display: block; position: relative; height: 2px; margin: 4px 6px;
+  background: repeating-linear-gradient(90deg, var(--brand-orange) 0 8px, transparent 8px 14px);
+  background-size: 14px 2px;
+}
+.link .line::before, .link .line::after { content: ""; position: absolute; top: -4px; border: 5px solid transparent; }
+.lane-out .line { animation: flow-out 0.9s linear infinite; }
+.lane-out .line::after { right: -6px; border-left: 8px solid var(--brand-orange); }
+.lane-in .line { animation: flow-in 0.9s linear infinite; }
+.lane-in .line::before { left: -6px; border-right: 8px solid var(--brand-orange); }
+.link .via { margin-top: 5px; color: #c9d3ff; font-size: 0.8rem; letter-spacing: 0.03em; }
+@keyframes flow-out { to { background-position: 14px 0; } }
+@keyframes flow-in { to { background-position: -14px 0; } }
+@media (prefers-reduced-motion: reduce) { .link .line { animation: none; } }
+.page-footer { max-width: 1120px; margin: 32px auto 0; padding: 28px 16px 44px; border-top: 1px solid var(--border); text-align: center; }
+.footer-links { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 16px; }
+/* The logos are single-colour masks painted in the link colour, so they stay as quiet as the text around them. */
+/* Two call-to-action pills. The playlist is the primary one, in the header's orange, so it is the first thing the eye finds. */
+.brand-link {
+  display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px;
+  border: 1px solid var(--accent); border-radius: 999px; color: var(--accent);
+  font-size: 1rem; font-weight: 600; text-decoration: none;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+.brand-primary { background: var(--brand-orange); border-color: var(--brand-orange); color: #00093a; box-shadow: 0 2px 12px rgba(255, 106, 0, 0.35); }
+.brand-link .mark { display: inline-block; height: 20px; background-color: currentColor; mask-repeat: no-repeat; mask-position: center; mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; -webkit-mask-size: contain; }
+.mark-youtube { aspect-ratio: 248 / 55; mask-image: url("/img/youtube.png"); -webkit-mask-image: url("/img/youtube.png"); }
+.mark-github { height: 24px; aspect-ratio: 477 / 159; mask-image: url("/img/github.png"); -webkit-mask-image: url("/img/github.png"); }
+.brand-link .label { text-decoration: none; }
+/* Orange only on hover, and a darker one on white so the text stays readable. */
+.brand-link:hover, .brand-link:focus-visible { background: var(--accent); color: var(--on-accent); transform: translateY(-1px); }
+.brand-primary:hover, .brand-primary:focus-visible { background: #ff8533; border-color: #ff8533; color: #00093a; }
+@media (prefers-reduced-motion: reduce) { .brand-link { transition: none; } .brand-link:hover, .brand-link:focus-visible { transform: none; } }
+.page-header strong { padding: 2px 10px; border-radius: 999px; background: rgba(255, 106, 0, 0.18); color: #ffd2b0; }
 h2 { font-size: 1.15rem; margin: 28px 0 8px; }
 .subtitle { margin: 4px 0 0; color: var(--muted); }
 .hint { color: var(--muted); font-weight: normal; font-size: 0.9rem; }
 
 label { display: block; margin: 12px 0 4px; font-weight: 600; }
 label.inline { display: inline-block; margin-right: 16px; font-weight: normal; }
-input[type="text"], input[type="search"], select {
+input[type="text"], input[type="search"], textarea, select {
   width: 100%;
   padding: 8px 10px;
   border: 1px solid var(--border);
@@ -53,6 +109,16 @@ input[type="text"], input[type="search"], select {
   color: var(--text);
   font: inherit;
 }
+#pbi-input { padding: 14px 16px; font-size: 1.25rem; }
+input[type="checkbox"], input[type="radio"] { width: 1.2em; height: 1.2em; accent-color: var(--accent); vertical-align: middle; }
+
+.card { margin-top: 18px; padding: 4px 20px 20px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 1px 3px rgba(0, 9, 58, 0.08); }
+.card h2 { margin-top: 12px; }
+/* Anything that already has a surface background needs a different one inside a card, or it blends in. */
+.card .testcases details, .card .raw, .card .upload-panel { background: var(--bg); }
+.more summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
+.more p { margin: 6px 0 0; }
+
 fieldset { border: 1px solid var(--border); border-radius: 6px; margin: 16px 0 0; padding: 4px 12px 12px; }
 legend { padding: 0 6px; font-weight: 600; }
 
@@ -63,22 +129,24 @@ button, a.button {
   border: 1px solid var(--accent);
   border-radius: 6px;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font: inherit;
   text-decoration: none;
   cursor: pointer;
 }
 button.secondary, a.button { background: transparent; color: var(--accent); }
-button.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+/* Fixed deep red in both schemes, so Push never looks like the orange accent. */
+button.danger { background: #c62828; border-color: #c62828; color: #fff; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
 
 .banner { margin: 16px 0 0; padding: 10px 14px; border-radius: 6px; border: 1px solid var(--border); }
 .banner-warning { background: var(--warn-bg); }
+#skipped { white-space: pre-wrap; margin: 0 0 12px; }
 .banner-error { background: var(--err-bg); white-space: pre-wrap; }
 
 .progress-row { display: flex; align-items: center; gap: 12px; margin: 4px 0 12px; }
-progress { flex: 1; height: 14px; accent-color: var(--accent); }
+progress { flex: 1; height: 14px; accent-color: var(--brand-orange); }
 progress[data-state="failed"] { accent-color: var(--danger); }
 .progress-label { min-width: 12em; text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
 
@@ -88,7 +156,23 @@ progress[data-state="failed"] { accent-color: var(--danger); }
 .steps li[data-state="running"]::before { content: "⏳"; }
 .steps li[data-state="done"]::before { content: "✓"; color: var(--ok); font-weight: bold; }
 .steps li[data-state="failed"]::before { content: "✕"; color: var(--danger); font-weight: bold; }
-.notes li { padding: 4px 0; color: var(--muted); font-size: 0.9rem; }
+/* Notes are Claude's own words, often a list or a table: keep their line breaks. */
+.notes li { padding: 4px 0; color: var(--muted); font-size: 0.9rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.log-tools { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.log-tools button, .log-tools a.button { padding: 4px 12px; font-size: 0.9rem; }
+.log-view { max-height: 22em; overflow: auto; margin: 0; font-size: 0.8rem; }
+.run-tools { margin: 12px 0 0; }
+.run-tools a { color: var(--muted); text-underline-offset: 3px; }
+.run-tools a:hover { color: var(--accent); }
+
+/* A recognised failure: a title, what to try, and the raw reason folded away. */
+#error .error-title { display: block; margin-bottom: 4px; }
+#error .error-steps { margin: 4px 0 8px; padding-left: 1.3em; }
+#error .error-details { margin: 4px 0 8px; }
+#error .error-details pre { max-height: 14em; overflow: auto; margin: 4px 0 0; font-size: 0.85rem; background: var(--bg); }
+#error .error-links { margin: 8px 0 0; }
+#error .error-links a { color: inherit; text-underline-offset: 3px; }
 details > summary { cursor: pointer; margin: 8px 0; color: var(--muted); }
 
 .summary { color: var(--muted); margin: 0 0 8px; }
@@ -117,6 +201,25 @@ details > summary { cursor: pointer; margin: 8px 0; color: var(--muted); }
 .testcases summary { display: flex; gap: 10px; align-items: baseline; padding: 8px 12px; margin: 0; color: var(--text); }
 .testcases .tc-title { flex: 1; font-weight: 600; overflow-wrap: anywhere; }
 .badge { font-size: 0.8rem; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); white-space: nowrap; }
+/* The text label stays, so the colour is never the only signal. */
+.badge[data-type="Positive"] { background: #e3f4e8; color: #14612b; border-color: #9fd3ae; }
+.badge[data-type="Negative"] { background: #fde8e8; color: #9b1c1c; border-color: #f0a8a8; }
+.badge[data-type="Edge Case"] { background: #fff4d6; color: #8a5a00; border-color: #e8c46a; }
+.badge[data-type="Performance"] { background: #e6ecff; color: #1e3a9f; border-color: #aab9f0; }
+.badge[data-type="Boundary"] { background: #e0f5f3; color: #0b5f58; border-color: #8fd3cc; }
+@media (prefers-color-scheme: dark) {
+  .badge[data-type="Positive"] { background: #17331f; color: #7fe0a0; border-color: #2f6b42; }
+  .badge[data-type="Negative"] { background: #3d2224; color: #ff9a9a; border-color: #7a3a3d; }
+  .badge[data-type="Edge Case"] { background: #3a3320; color: #f5cd72; border-color: #7a6527; }
+  .badge[data-type="Performance"] { background: #1d2750; color: #a9bcff; border-color: #3a4a8a; }
+  .badge[data-type="Boundary"] { background: #12332f; color: #7fdcd2; border-color: #276860; }
+}
+/* Priority is a different shape from type (filled / outlined), so the two never share a colour language. */
+.badge[data-priority="1"] { background: var(--brand-orange); color: #00093a; border-color: var(--brand-orange); font-weight: 700; }
+.badge[data-priority="2"] { background: transparent; color: #a34100; border-color: #ff6a00; }
+@media (prefers-color-scheme: dark) {
+  .badge[data-priority="2"] { color: #ffb27a; }
+}
 .tc-body { padding: 0 12px 12px; }
 .tc-body dl { margin: 8px 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; }
 .tc-body dt { color: var(--muted); }
@@ -128,6 +231,8 @@ table.step-table { width: 100%; border-collapse: collapse; margin-top: 8px; font
 
 .history li { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; gap: 10px; flex-wrap: wrap; align-items: baseline; }
 .history button { padding: 2px 10px; font-size: 0.9rem; }
+.history li.empty { display: block; padding: 24px 12px; text-align: center; border: 1px dashed var(--border); border-radius: 8px; }
+.history li.empty strong { display: block; color: var(--text); }
 .raw { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 dialog { max-width: 520px; width: calc(100% - 32px); border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text); }
@@ -139,3 +244,29 @@ dialog h2 { margin-top: 0; }
 @media (max-width: 600px) {
   .testcases summary { flex-wrap: wrap; }
 }
+#error .error-skipped { margin: 0 0 4px; font-weight: 600; white-space: pre-wrap; }
+.context-input textarea { display: block; resize: vertical; min-height: 8em; line-height: 1.4; }
+#error [data-testid="error-raw"] { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* A card whose title folds it. Native <details>: works with the keyboard and without script. Nothing folds by itself. */
+.collapse > summary { display: flex; align-items: center; justify-content: space-between; margin: 0; color: var(--text); list-style: none; cursor: pointer; }
+.collapse > summary::-webkit-details-marker { display: none; }
+.collapse > summary h2 { margin: 12px 0; }
+.collapse > summary::after {
+  content: ""; flex: none; width: 0.55em; height: 0.55em; margin-right: 6px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform 0.15s;
+}
+.collapse[open] > summary::after { transform: rotate(-135deg); }
+.collapse > summary:hover::after { border-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .collapse > summary::after { transition: none; } }
+
+/* Regression: a violet chip, so it never reads as one of the type colours or the orange priority. */
+.badge-regression { background: #efe7ff; color: #4b2a99; border-color: #cdb9ff; }
+@media (prefers-color-scheme: dark) { .badge-regression { background: #2a2150; color: #c9b8ff; border-color: #5a47a8; } }
+.filters .check { display: flex; align-items: center; gap: 8px; align-self: end; margin: 0 0 8px; font-weight: 600; }
+.filters .check:has(input:disabled) { opacity: 0.6; }
+
+.icon-button { margin-left: auto; padding: 4px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); line-height: 0; }
+.history button.icon-button { padding: 4px 6px; }
+.icon-button:hover, .icon-button:focus-visible { color: var(--danger); border-color: var(--danger); }

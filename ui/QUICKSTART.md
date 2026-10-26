@@ -73,11 +73,21 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
 ## 5. Use it
 
 1. **Generate.** Type PBI ids (comma separated, e.g. `2, 3`). Optionally pick extra context: the repo's
-   file, an uploaded document, or a URL. It is used for this run only, and nothing is loaded unless you
-   choose it. Click **Generate test cases**.
-2. **Watch.** The progress bar counts the steps and shows elapsed time; **Run log** shows the raw events.
-   Only one run at a time. **Cancel run** stops a stuck one.
-3. **Review.** Filter by type, PBI, or text. Download the ADO CSV.
+   file, text you paste (the quickest way to bring in a wiki page or an email), an uploaded document, or a
+   URL (public pages only). It is used for this run only, and nothing is loaded unless you choose it.
+   Click **Generate test cases**. If an id is not a PBI (a Bug, for example), the message appears right
+   under the button and names the id.
+2. **Watch.** The progress bar counts the steps and shows elapsed time; **Claude's notes** and **Full log**
+   show what happened. Only one run at a time. **Cancel run** stops a stuck one. To save scrolling, click
+   the title of **Generate**, **Progress**, **Review** or **Recent runs** to fold it, and again to open it.
+   Nothing folds by itself, and new results always open the Review. The trash icon at the right of a run
+   in Recent runs deletes that one run (its log, and its CSV if it has one) from this computer, after you
+   confirm; the dialog says exactly what goes. The copy in the repo's `output/` folder stays. It never
+   touches Azure DevOps, it is refused while a run is going, and if the run was on screen the screen resets.
+3. **Review.** Filter by type, PBI, or text. Download the ADO CSV. If you gave a regression list, test cases
+   that match one of its scripts carry a violet **regression** chip (hover it to see which script), and
+   **Regression only** shows just those. The match is Claude's judgement from the names you gave it, so
+   treat the chip as a hint to check, not proof of coverage. The test cases are all still written.
 4. **Edited the CSV?** Fix it in Excel (save as *CSV UTF-8*, keep each title starting with
    `[TC-<PBI id>-...]`), upload it back, and check **What changed**. The upload is pushed instead of the
    original; **Remove upload** goes back to the original.
@@ -137,3 +147,25 @@ pnpm e2e     # Playwright against a fake `claude` that replays a recorded run (n
 | First run in a new clone fails or hangs on the ADO step | The folder or the `ado` MCP server was never approved; do step 3 in interactive `claude` |
 | PBI fetch fails | `ado` MCP server did not connect (check the PAT scopes, expiry and `ADO_ORG`) |
 | Port already in use | Set `UI_PORT` to a free port |
+
+## When something breaks: logs
+
+When a run fails, the red box at the top says what is probably wrong and what to try. If it is not enough:
+
+- **Download full log** (in the red box, in the **Full log** section while a run goes, and under the review) is everything the run printed, with your token removed.
+- **Download diagnostics** is one text file for asking someone else for help: the run's status and error, the steps, your settings (set or `MISSING`, never the values), and the full log. Read it before you share it, because it can contain project and work item details.
+- **Claude's notes** are only Claude's own commentary. The full log is the place to look.
+
+The page keeps each run's files in `ui/.data/runs/<run id>/`:
+
+| File | What it holds |
+|---|---|
+| `run.log` | The raw output of the run (up to 5 MB) |
+| `events.jsonl` | The steps and notes the page shows |
+| `meta.json` | Status, error, and the plain-language cause when it is one we recognise |
+| `tc.csv` | The generated CSV |
+
+Two more logs live outside the page, and they are the ones to read when Azure DevOps will not connect:
+
+- Claude Code's own transcript of every run: `~/.claude/projects/<this project's folder>/<session>.jsonl`.
+- The Azure DevOps server's connection log: `%LOCALAPPDATA%\claude-cli-nodejs\Cache\<this project's folder>\mcp-logs-ado\`. It shows each connection attempt and why it failed.

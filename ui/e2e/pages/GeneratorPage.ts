@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 
 export type ContextKind = "hld" | "regression";
-export type ContextSource = "repo" | "upload" | "url";
+export type ContextSource = "repo" | "paste" | "upload" | "url";
 
 export class GeneratorPage {
   readonly projectName: Locator;
@@ -34,6 +34,32 @@ export class GeneratorPage {
   readonly uploadWarnings: Locator;
   readonly removeUploadButton: Locator;
   readonly history: Locator;
+  readonly generateCollapse: Locator;
+  readonly generateToggle: Locator;
+  readonly progressCollapse: Locator;
+  readonly progressToggle: Locator;
+  readonly historyCollapse: Locator;
+  readonly historyToggle: Locator;
+  readonly reviewCollapse: Locator;
+  readonly reviewToggle: Locator;
+  readonly deleteRunButtons: Locator;
+  readonly deleteDialog: Locator;
+  readonly deleteCancelButton: Locator;
+  readonly deleteConfirmButton: Locator;
+  readonly regressionBadges: Locator;
+  readonly regressionFilter: Locator;
+  readonly notes: Locator;
+  readonly logDetails: Locator;
+  readonly logView: Locator;
+  readonly logDownload: Locator;
+  readonly diagnosticsDownload: Locator;
+  readonly resultsLogLink: Locator;
+  readonly skipped: Locator;
+  readonly errorTitle: Locator;
+  readonly errorSteps: Locator;
+  readonly errorRaw: Locator;
+  readonly errorLogLink: Locator;
+  readonly errorDiagnosticsLink: Locator;
 
   constructor(private readonly page: Page) {
     this.projectName = page.getByTestId("project-name");
@@ -66,6 +92,32 @@ export class GeneratorPage {
     this.uploadWarnings = page.getByTestId("upload-warnings");
     this.removeUploadButton = page.getByRole("button", { name: /Remove upload/ });
     this.history = page.getByTestId("history-item");
+    this.generateCollapse = page.getByTestId("generate-collapse");
+    this.generateToggle = page.getByTestId("generate-toggle");
+    this.progressCollapse = page.getByTestId("progress-collapse");
+    this.progressToggle = page.getByTestId("progress-toggle");
+    this.historyCollapse = page.getByTestId("history-collapse");
+    this.historyToggle = page.getByTestId("history-toggle");
+    this.reviewCollapse = page.getByTestId("review-collapse");
+    this.reviewToggle = page.getByTestId("review-toggle");
+    this.deleteRunButtons = page.getByTestId("delete-run-button");
+    this.deleteDialog = page.getByTestId("delete-dialog");
+    this.deleteCancelButton = page.getByTestId("delete-cancel-button");
+    this.deleteConfirmButton = page.getByTestId("delete-confirm-button");
+    this.regressionBadges = page.getByTestId("regression-badge");
+    this.regressionFilter = page.getByTestId("filter-regression");
+    this.notes = page.getByTestId("notes").getByRole("listitem");
+    this.logDetails = page.getByTestId("log-details");
+    this.logView = page.getByTestId("log-view");
+    this.logDownload = page.getByTestId("log-download");
+    this.diagnosticsDownload = page.getByTestId("diagnostics-download");
+    this.resultsLogLink = page.getByTestId("results-log-link");
+    this.skipped = page.getByTestId("skipped");
+    this.errorTitle = page.getByTestId("error-title");
+    this.errorSteps = page.getByTestId("error-steps");
+    this.errorRaw = page.getByTestId("error-raw");
+    this.errorLogLink = page.getByTestId("error-log-link");
+    this.errorDiagnosticsLink = page.getByTestId("error-diagnostics-link");
   }
 
   goto = async (): Promise<void> => {
@@ -83,7 +135,19 @@ export class GeneratorPage {
     await expect(this.summary).toContainText("test cases", { timeout: 20_000 });
   };
 
-  testCaseByTitle = (text: string): Locator => this.testCases.filter({ hasText: text });
+  // The log viewer is a <details>; opening it loads the end of the log.
+  openLog = async (): Promise<void> => {
+    await this.logDetails.getByText("Full log", { exact: true }).click();
+  };
+
+  // The text a download link serves, read the way the browser would fetch it.
+  textOf = async (link: Locator): Promise<string> => {
+    const response = await this.page.request.get((await link.getAttribute("href")) ?? "");
+    expect(response.ok()).toBe(true);
+    return response.text();
+  };
+
+  testCaseByTitle =(text: string): Locator => this.testCases.filter({ hasText: text });
 
   contextInclude = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}`);
   contextOptions = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-options`);
@@ -91,6 +155,8 @@ export class GeneratorPage {
   contextFile = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-file`);
   contextFileInfo = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-file-info`);
   contextUrlInput = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-url-input`);
+  contextPasteInput = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-paste-input`);
+  contextPasteInfo = (kind: ContextKind): Locator => this.page.getByTestId(`ctx-${kind}-paste-info`);
 
   // Ticks the box and picks where the document comes from.
   useContext = async (kind: ContextKind, source: ContextSource): Promise<void> => {

@@ -1,7 +1,8 @@
 // Pure progress maths for the progress bar. No DOM here, so it can be unit-tested.
 
 export type StepState = "running" | "done" | "failed";
-export type Outcome = "running" | "done" | "failed" | "cancelled";
+// "stopped" is a run that ended on purpose because of what was typed (for example only a Bug): not a failure.
+export type Outcome = "running" | "done" | "failed" | "cancelled" | "stopped";
 
 export type Progress = {
   done: number; // steps that have finished (successfully or not)
@@ -32,6 +33,7 @@ export const progressLabel = (progress: Progress, elapsedMs: number, outcome: Ou
   if (outcome === "done") return `Finished in ${elapsed}`;
   if (outcome === "failed") return `Failed after ${elapsed}`;
   if (outcome === "cancelled") return `Cancelled after ${elapsed}`;
+  if (outcome === "stopped") return `Stopped after ${elapsed}`;
   if (progress.indeterminate) return `Starting… ${elapsed}`;
   return `${progress.done} of ${progress.total} steps · ${elapsed}`;
 };

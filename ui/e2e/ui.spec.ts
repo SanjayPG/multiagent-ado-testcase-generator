@@ -1,4 +1,6 @@
+import { rmSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 import { GeneratorPage } from "./pages/GeneratorPage";
 
@@ -59,6 +61,38 @@ test.describe("test case generator UI", () => {
     await generator.generateAndWaitForResults();
 
     await expect(generator.contextUsed).toContainText('HLD — your uploaded file "my-hld.md"');
+  });
+
+  test("runs with pasted text and says so in the review", async () => {
+    await generator.useContext("hld", "paste");
+    await expect(generator.contextPasteInput("hld")).toBeVisible();
+    await generator.contextPasteInput("hld").fill("Sessions expire after 30 minutes of inactivity.\n\n| Role | Limit |\n|---|---|\n| User | 5 tries |");
+    await expect(generator.contextPasteInfo("hld")).toContainText("B");
+
+    await generator.generateAndWaitForResults("2");
+    await expect(generator.contextUsed).toContainText("HLD — your pasted text");
+  });
+
+  test("keeps the paste box hidden until Paste text is chosen", async () => {
+    await generator.contextInclude("hld").check();
+    await expect(generator.contextPasteInput("hld")).toBeHidden(); // the repo file is the default when it exists
+    await generator.contextSource("hld", "paste").check();
+    await expect(generator.contextPasteInput("hld")).toBeVisible();
+    await generator.contextSource("hld", "upload").check();
+    await expect(generator.contextPasteInput("hld")).toBeHidden();
+  });
+
+  test("asks for text when Paste text is chosen but left empty, and for one over the limit", async () => {
+    await generator.useContext("hld", "paste");
+    await generator.generate("2");
+    await expect(generator.errorBanner).toContainText("HLD: paste some text");
+    await expect(generator.progressSection).toBeHidden();
+
+    await generator.contextPasteInput("hld").fill("word ".repeat(50_000));
+    await expect(generator.contextPasteInfo("hld")).toContainText("over the 200 KB limit");
+    await generator.generateButton.click();
+    await expect(generator.errorBanner).toContainText("over the 200 KB limit");
+    await expect(generator.progressSection).toBeHidden();
   });
 
   test("asks for a document or a URL when that source is chosen but left empty", async () => {
@@ -221,5 +255,222 @@ test.describe("test case generator UI", () => {
     await expect(generator.pushButton).toBeDisabled();
     await expect(generator.pushProgressLabel).toContainText("Finished in");
     await expect(generator.pushProgressBar).toHaveAttribute("value", "1");
+  });
+
+  test("shows the full log of a run and offers it, with the diagnostics, as downloads", async () => {
+    await generator.generateAndWaitForResults();
+
+    // The viewer shows the end of the log; the download has all of it, including the first line.
+    await generator.openLog();
+    await expect(generator.logView).toContainText("finished, exit code 0");
+
+    const log = await generator.textOf(generator.logDownload);
+    expect(log).toContain("started: claude -p /generate-test-cases --pbis 2,3");
+    expect(log).toContain('"type":"result"');
+    const diagnostics = await generator.textOf(generator.diagnosticsDownload);
+    expect(diagnostics).toContain("ADO_PAT_B64: set");
+    expect(diagnostics).toContain("== Full log ==");
+
+    // The same two downloads stay available from the review, for a run opened later from the history.
+    expect(await generator.textOf(generator.resultsLogLink)).toContain("finished, exit code 0");
+  });
+
+  test("explains an Azure DevOps connection failure in plain words and keeps the raw reason", async ({ page }) => {
+    await generator.generate("99");
+
+    await expect(generator.errorTitle).toHaveText("Couldn't connect to Azure DevOps", { timeout: 20_000 });
+    await expect(generator.errorBanner).toHaveClass(/banner-error/);
+    await expect(generator.errorSteps).toContainText("ADO_PAT_B64");
+    // The raw reason is folded away until asked for.
+    await expect(generator.errorRaw).toBeHidden();
+    await page.getByText("Technical details").click();
+    await expect(generator.errorRaw).toContainText("no CSV file was found");
+
+    expect(await generator.textOf(generator.errorLogLink)).toContain("CONNECT_TIMEOUT");
+    expect(await generator.textOf(generator.errorDiagnosticsLink)).toContain("likely cause: Couldn't connect to Azure DevOps");
+  });
+
+  test("says which ids were skipped as not PBIs, and shows nothing when none were", async () => {
+    await generator.generateAndWaitForResults("2, 97");
+    await expect(generator.skipped).toBeVisible();
+    await expect(generator.skipped).toContainText("Skipped PBI 97: Bug is not a PBI.");
+    expect(await generator.testCases.count()).toBeGreaterThan(20);
+
+    await generator.generateAndWaitForResults("2, 3");
+    await expect(generator.skipped).toBeHidden();
+  });
+
+  test("explains that a Bug is not a PBI when every id was one", async ({ page }) => {
+    // The app accepts a CSV written in the last two seconds, so clear the one the previous test left behind.
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true });
+    await generator.generate("98");
+
+    await expect(generator.errorTitle).toHaveText("That work item is not a PBI", { timeout: 20_000 });
+    // Something to change in what was typed: amber, not the red used for a break.
+    await expect(generator.errorBanner).toHaveClass(/banner-warning/);
+    await expect(generator.errorBanner).not.toHaveClass(/banner-error/);
+    // It names the id, sits under the Generate button (not above the form), and the run is "stopped", not "failed".
+    await expect(page.getByTestId("error-skipped")).toContainText("PBI 98: Bug is not a PBI.");
+    await expect(page.locator("#error-slot-generate #error")).toBeVisible();
+    await expect(generator.progressLabel).toContainText("Stopped after");
+    await expect(generator.errorSteps).toContainText("Product Backlog Item");
+    await expect(generator.testCases).toHaveCount(0);
+  });
+
+  test("explains an id that does not exist, names it, and does not stop at the bare 'no CSV' line", async ({ page }) => {
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true });
+    await generator.generate("96");
+
+    await expect(generator.errorTitle).toHaveText("A PBI could not be found", { timeout: 20_000 });
+    await expect(generator.errorBanner).toHaveClass(/banner-warning/);
+    await expect(page.getByTestId("error-skipped")).toContainText("PBI 96: not found in project TestProject.");
+    await expect(generator.progressLabel).toContainText("Stopped after");
+    // Claude's own reason is one click away under Technical details.
+    await page.getByText("Technical details").click();
+    await expect(generator.errorRaw).toContainText("The id probably does not exist");
+  });
+
+  test("shows a regression chip on tagged test cases and filters on it", async () => {
+    await generator.generateAndWaitForResults();
+
+    // The recorded run tags four test cases regression; each shows a chip without opening the row.
+    await expect(generator.regressionBadges).toHaveCount(4);
+    await expect(generator.regressionBadges.first()).toHaveAttribute("title", "Tagged regression");
+    await expect(generator.regressionFilter).toBeEnabled();
+    await expect(generator.regressionFilter).toHaveAccessibleName(/Regression only \(4\)/);
+
+    const all = await generator.testCases.count();
+    await generator.regressionFilter.check();
+    await expect(generator.testCases).toHaveCount(4);
+    for (const testCase of await generator.testCases.all()) {
+      await expect(testCase.getByTestId("regression-badge")).toBeVisible();
+    }
+
+    await generator.regressionFilter.uncheck();
+    await expect(generator.testCases).toHaveCount(all);
+  });
+
+  test("folds Generate, Progress and Recent runs by hand, and never folds anything by itself", async () => {
+    // All three start open.
+    await expect(generator.generateCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.historyCollapse).toHaveJSProperty("open", true);
+
+    await generator.generateToggle.click();
+    await expect(generator.pbiInput).toBeHidden();
+    await generator.generateToggle.click();
+    await expect(generator.pbiInput).toBeVisible();
+
+    await generator.generateAndWaitForResults();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    // The run finished and the review is showing, and still nothing has closed on its own.
+    await expect(generator.generateCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.historyCollapse).toHaveJSProperty("open", true);
+
+    await generator.progressToggle.click();
+    await expect(generator.steps.first()).toBeHidden();
+    await expect(generator.summary).toBeVisible(); // the review is not part of Progress
+    await generator.progressToggle.click();
+    await expect(generator.steps.first()).toBeVisible();
+
+    await generator.historyToggle.click();
+    await expect(generator.history.first()).toBeHidden();
+    await generator.historyToggle.click();
+    await expect(generator.history.first()).toBeVisible();
+
+    await generator.generateToggle.click(); // folding Generate leaves the review where it is
+    await expect(generator.pbiInput).toBeHidden();
+    await expect(generator.summary).toBeVisible();
+  });
+
+  test("folds the Review by hand, and new results open it again", async () => {
+    await generator.generateAndWaitForResults();
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", true);
+
+    await generator.reviewToggle.click();
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", false);
+    await expect(generator.testCases.first()).toBeHidden();
+    await generator.reviewToggle.click();
+    await expect(generator.testCases.first()).toBeVisible();
+
+    await generator.reviewToggle.click(); // fold it, then run again: the new results must not stay hidden
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    await generator.generate("2, 3");
+    await expect(generator.reviewCollapse).toHaveJSProperty("open", true, { timeout: 20_000 });
+    await expect(generator.testCases.first()).toBeVisible();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+  });
+
+  test("deletes one run from Recent runs after asking, and keeps the others", async ({ page }) => {
+    // Start from an empty list: it shows at most 20 runs, and earlier tests have left plenty.
+    const { runs } = (await (await page.request.get("/api/runs")).json()) as { runs: Array<{ id: string }> };
+    for (const run of runs) await page.request.delete(`/api/runs/${run.id}`);
+    await generator.goto();
+
+    await generator.generateAndWaitForResults();
+    await expect(generator.history.first()).toContainText("generate · done");
+    const before = await generator.deleteRunButtons.count();
+
+    await generator.generate("2, 3"); // a second run; rows are newest first, and a running row has no delete button
+    await expect(generator.deleteRunButtons).toHaveCount(before + 1, { timeout: 20_000 });
+    await expect(generator.cancelButton).toBeHidden();
+
+    // Cancelling keeps it, and the dialog names the run.
+    await generator.deleteRunButtons.nth(1).click();
+    await expect(generator.deleteDialog).toBeVisible();
+    await expect(generator.deleteDialog).toContainText("generate · done · PBIs 2, 3");
+    await expect(generator.deleteDialog).toContainText("This deletes its CSV and its log from this computer.");
+    await generator.deleteCancelButton.click();
+    await expect(generator.deleteDialog).toBeHidden();
+    await expect(generator.deleteRunButtons).toHaveCount(before + 1);
+
+    // Deleting the older run leaves the newest one, and the Review on screen, alone.
+    await generator.deleteRunButtons.nth(1).click();
+    await generator.deleteConfirmButton.click();
+    await expect(generator.deleteRunButtons).toHaveCount(before);
+    await expect(generator.testCases.first()).toBeVisible();
+
+    // Deleting the run that is on screen puts the screen back to a fresh start.
+    await generator.deleteRunButtons.first().click();
+    await generator.deleteConfirmButton.click();
+    await expect(generator.deleteRunButtons).toHaveCount(before - 1);
+    await expect(generator.testCases).toHaveCount(0);
+    await expect(generator.progressSection).toBeHidden();
+  });
+
+  test("tells the truth about what deleting a failed run removes: it has no CSV", async () => {
+    rmSync(path.resolve(".e2e-sandbox", "output"), { recursive: true, force: true }); // a recent CSV would make this run succeed
+    await generator.generate("99");
+    await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });
+    await expect(generator.cancelButton).toBeHidden();
+
+    await generator.deleteRunButtons.first().click();
+    await expect(generator.deleteDialog).toContainText("generate · failed · PBIs 99");
+    await expect(generator.deleteDialog).toContainText("This deletes its log from this computer.");
+    await expect(generator.deleteDialog).not.toContainText("CSV");
+    await generator.deleteCancelButton.click();
+  });
+
+  test("starting a run opens Progress again if it was folded", async () => {
+    await generator.generateAndWaitForResults();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    await generator.progressToggle.click();
+    await expect(generator.progressCollapse).toHaveJSProperty("open", false);
+
+    await generator.generate("2, 3");
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+  });
+
+  test("keeps the line breaks and the table in Claude's notes", async ({ page }) => {
+    await generator.generate("99");
+    await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });
+
+    await page.getByText("Claude's notes", { exact: true }).click();
+    const note = generator.notes.first();
+    await expect(note).toContainText("| Type | Count |");
+    await expect(note).toHaveCSS("white-space", "pre-wrap");
+    expect(await note.innerText()).toContain("\n|---|---|\n");
   });
 });

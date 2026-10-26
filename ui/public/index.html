@@ -8,29 +8,48 @@
   </head>
   <body>
     <header class="page-header">
-      <h1>Test Case Generator</h1>
+      <div class="flow" role="img" aria-label="Claude Code connects to Azure DevOps through the Azure DevOps MCP server">
+        <figure class="node">
+          <img src="/img/claude.png" alt="" width="64" height="64" />
+          <figcaption>Claude Code</figcaption>
+        </figure>
+        <div class="link" aria-hidden="true">
+          <div class="lane lane-in"><span class="lane-label">read PBIs</span><span class="line"></span></div>
+          <div class="lane lane-out"><span class="line"></span><span class="lane-label">push test cases</span></div>
+          <span class="via">via MCP</span>
+        </div>
+        <figure class="node">
+          <img src="/img/azure-devops.png" alt="" width="64" height="64" />
+          <figcaption>Azure DevOps</figcaption>
+        </figure>
+      </div>
+      <h1>AI Test Case <span class="accent">Generator</span></h1>
       <p class="subtitle">
-        Azure DevOps project: <strong id="project-name" data-testid="project-name">—</strong>
+        Project: <strong id="project-name" data-testid="project-name">—</strong>
       </p>
     </header>
 
     <main>
       <div id="env-banner" class="banner banner-warning" role="alert" data-testid="env-banner" hidden></div>
-      <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
 
-      <section aria-labelledby="generate-heading">
-        <h2 id="generate-heading">1. Generate</h2>
+      <section class="card" aria-labelledby="generate-heading">
+        <!-- Generate, Progress and Recent runs can be folded by hand; nothing folds by itself. -->
+        <details class="collapse" id="generate-collapse" data-testid="generate-collapse" open>
+        <summary data-testid="generate-toggle"><h2 id="generate-heading">1. Generate</h2></summary>
         <form id="generate-form" autocomplete="off">
-          <label for="pbi-input">PBI ids <span class="hint">(comma separated, e.g. 2, 3)</span></label>
-          <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" required />
+          <label for="pbi-input">PBI ids <span class="hint">(comma separated)</span></label>
+          <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" placeholder="e.g. 2, 3" required />
 
           <fieldset class="context">
             <legend>Extra context <span class="hint">(optional)</span></legend>
-            <p class="hint">
-              A design document or a list of regression scripts. It is summarised to about 500 words and given to
-              every test-case writer. A file or URL you choose here is used for this run only; the files in your
-              repo's context/ folder are never changed.
-            </p>
+            <p class="hint">A design document or a list of regression scripts, summarised for the test-case writers.</p>
+            <details class="more">
+              <summary>More</summary>
+              <p class="hint">
+                It is summarised to about 500 words and given to every test-case writer. A file, pasted text or URL you
+                choose here is used for this run only; the files in your repo's context/ folder are never changed.
+              </p>
+            </details>
             <div id="context-cards" data-testid="context-cards"></div>
           </fieldset>
 
@@ -39,25 +58,44 @@
             <button type="button" id="cancel-button" data-testid="cancel-button" class="secondary" hidden>Cancel run</button>
           </div>
         </form>
+        <!-- Errors appear next to the controls that caused them: here for a run, under Push for the review. -->
+        <div id="error-slot-generate">
+          <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
+        </div>
+        </details>
       </section>
 
-      <section id="progress-section" data-testid="progress-section" aria-labelledby="progress-heading" hidden>
-        <h2 id="progress-heading">Progress</h2>
+      <section class="card" id="progress-section" data-testid="progress-section" aria-labelledby="progress-heading" hidden>
+        <details class="collapse" id="progress-collapse" data-testid="progress-collapse" open>
+        <summary data-testid="progress-toggle"><h2 id="progress-heading">Progress</h2></summary>
         <div class="progress-row">
           <progress id="progress-bar" data-testid="progress-bar" aria-label="Run progress" max="1"></progress>
           <span id="progress-label" class="progress-label" data-testid="progress-label"></span>
         </div>
         <ol id="steps" class="steps" aria-live="polite" data-testid="steps"></ol>
         <details>
-          <summary>Run log</summary>
-          <ol id="notes" class="notes"></ol>
+          <summary>Claude's notes</summary>
+          <ol id="notes" class="notes" data-testid="notes"></ol>
+        </details>
+        <details id="log-details" data-testid="log-details" class="log-details">
+          <summary>Full log</summary>
+          <p class="hint">Everything the run printed, with secrets removed. Send the diagnostics file if you ask someone for help.</p>
+          <div class="log-tools">
+            <button type="button" id="log-refresh" data-testid="log-refresh" class="secondary">Refresh</button>
+            <a id="log-download" data-testid="log-download" class="button" href="#" download>Download full log</a>
+            <a id="diagnostics-download" data-testid="diagnostics-download" class="button" href="#" download>Download diagnostics</a>
+          </div>
+          <pre id="log-view" class="raw log-view" data-testid="log-view" tabindex="0"></pre>
+        </details>
         </details>
       </section>
 
-      <section id="results-section" aria-labelledby="results-heading" hidden>
-        <h2 id="results-heading">2. Review</h2>
+      <section class="card" id="results-section" aria-labelledby="results-heading" hidden>
+        <details class="collapse" id="review-collapse" data-testid="review-collapse" open>
+        <summary data-testid="review-toggle"><h2 id="results-heading">2. Review</h2></summary>
         <p id="summary" class="summary" data-testid="summary"></p>
         <p id="context-used" class="summary" data-testid="context-used"></p>
+        <p id="skipped" class="banner banner-warning" role="status" data-testid="skipped" hidden></p>
 
         <div class="filters">
           <label>Type
@@ -68,6 +106,10 @@
           </label>
           <label>Search
             <input id="filter-text" data-testid="filter-text" type="search" placeholder="title or step text" />
+          </label>
+          <label class="check">
+            <input type="checkbox" id="filter-regression" data-testid="filter-regression" />
+            Regression only <span id="filter-regression-count" class="hint"></span>
           </label>
         </div>
 
@@ -91,9 +133,16 @@
           <a id="download-link" data-testid="download-link" class="button" href="#" download>Download CSV</a>
           <button type="button" id="push-button" data-testid="push-button" class="danger">Push to Azure DevOps…</button>
         </div>
+        <div id="error-slot-review"></div>
+        <p class="run-tools hint">
+          Something look wrong?
+          <a id="results-log-link" data-testid="results-log-link" href="#" download>Download full log</a> ·
+          <a id="results-diagnostics-link" data-testid="results-diagnostics-link" href="#" download>Download diagnostics</a>
+        </p>
+        </details>
       </section>
 
-      <section id="push-section" aria-labelledby="push-heading" hidden>
+      <section class="card" id="push-section" aria-labelledby="push-heading" hidden>
         <h2 id="push-heading">3. Push result</h2>
         <div class="progress-row">
           <progress id="push-progress-bar" data-testid="push-progress-bar" aria-label="Push progress" max="1"></progress>
@@ -102,13 +151,44 @@
         <ol id="push-steps" class="steps" aria-live="polite" data-testid="push-steps"></ol>
         <p id="push-summary" class="summary" data-testid="push-summary"></p>
         <pre id="push-raw" class="raw" data-testid="push-raw"></pre>
+        <p class="run-tools hint">
+          <a id="push-log-link" data-testid="push-log-link" href="#" download>Download full log</a> ·
+          <a id="push-diagnostics-link" data-testid="push-diagnostics-link" href="#" download>Download diagnostics</a>
+        </p>
       </section>
 
-      <section aria-labelledby="history-heading">
-        <h2 id="history-heading">Recent runs</h2>
+      <section class="card" aria-labelledby="history-heading">
+        <details class="collapse" data-testid="history-collapse" open>
+        <summary data-testid="history-toggle"><h2 id="history-heading">Recent runs</h2></summary>
         <ul id="history" class="history" data-testid="history"></ul>
+        </details>
       </section>
     </main>
+
+    <footer class="page-footer">
+      <p class="footer-links">
+        <a class="brand-link brand-primary" href="https://youtube.com/playlist?list=PLTTtCOmLVLIw" target="_blank" rel="noopener noreferrer">
+          <span class="mark mark-youtube" role="img" aria-label="YouTube"></span>
+          <span class="label">Watch the SDET Sanjay Claude playlist</span>
+        </a>
+        <a class="brand-link" href="https://github.com/SanjayPG/multiagent-ado-testcase-generator" target="_blank" rel="noopener noreferrer">
+          <span class="mark mark-github" role="img" aria-label="GitHub"></span>
+          <span class="label">Source code</span>
+        </a>
+      </p>
+    </footer>
+
+    <dialog id="delete-dialog" data-testid="delete-dialog" aria-labelledby="delete-dialog-title">
+      <form id="delete-form" method="dialog">
+        <h2 id="delete-dialog-title">Delete this run?</h2>
+        <p id="delete-dialog-text" data-testid="delete-dialog-text"></p>
+        <p id="delete-dialog-detail" data-testid="delete-dialog-detail"></p>
+        <div class="actions">
+          <button type="submit" id="delete-confirm-button" data-testid="delete-confirm-button" class="danger">Delete run</button>
+          <button type="button" id="delete-cancel-button" data-testid="delete-cancel-button" class="secondary">Cancel</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="push-dialog" data-testid="push-dialog" aria-labelledby="push-dialog-title">
       <form id="push-form" method="dialog">

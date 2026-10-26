@@ -1,3 +1,4 @@
+import { hasRegressionTag, matchedScript } from "./regression.js";
 import { computeProgress, progressLabel, type Outcome, type StepState as ProgressState } from "./progress.js";
 
 // Browser code. All text that comes from the pipeline or from Azure DevOps is inserted with textContent / text
@@ -42,10 +43,11 @@ type RepoContext = {
 
 type ContextRequest =
   | { kind: ContextKind; source: "repo" }
+  | { kind: ContextKind; source: "paste"; text: string }
   | { kind: ContextKind; source: "upload"; name: string; text: string }
   | { kind: ContextKind; source: "url"; url: string };
 
-type ContextUsed = { kind: ContextKind; source: "repo" | "upload" | "url"; label: string; bytes: number };
+type ContextUsed = { kind: ContextKind; source: "repo" | "paste" | "upload" | "url"; label: string; bytes: number };
 
 type RunMeta = {
   id: string;
@@ -56,6 +58,8 @@ type RunMeta = {
   parentRunId?: string;
   resultText?: string;
   errorMessage?: string;
+  errorHint?: { title: string; steps: string[]; tone: "warning" | "error" };
+  skipped?: Array<{ id: number; reason: string }>;
   hasCsv?: boolean;
   testCaseCount?: number;
   durationMs?: number | null;
@@ -126,20 +130,40 @@ const form = byId<HTMLFormElement>("generate-form");
 const pbiInput = byId<HTMLInputElement>("pbi-input");
 const contextCardsBox = byId("context-cards");
 const contextUsedText = byId("context-used");
+const skippedBanner = byId("skipped");
 const generateButton = byId<HTMLButtonElement>("generate-button");
 const cancelButton = byId<HTMLButtonElement>("cancel-button");
 const progressSection = byId("progress-section");
+const generateCollapse = byId<HTMLDetailsElement>("generate-collapse");
+const reviewCollapse = byId<HTMLDetailsElement>("review-collapse");
+const deleteDialog = byId<HTMLDialogElement>("delete-dialog");
+const deleteForm = byId<HTMLFormElement>("delete-form");
+const deleteDialogText = byId("delete-dialog-text");
+const deleteDialogDetail = byId("delete-dialog-detail");
+const deleteCancelButton = byId<HTMLButtonElement>("delete-cancel-button");
+const progressCollapse = byId<HTMLDetailsElement>("progress-collapse");
 const progressBar = byId<HTMLProgressElement>("progress-bar");
 const progressLabelEl = byId("progress-label");
 const pushProgressBar = byId<HTMLProgressElement>("push-progress-bar");
 const pushProgressLabel = byId("push-progress-label");
 const stepsList = byId("steps");
 const notesList = byId("notes");
+const logDetails = byId<HTMLDetailsElement>("log-details");
+const logView = byId("log-view");
+const logRefreshButton = byId<HTMLButtonElement>("log-refresh");
+const logDownload = byId<HTMLAnchorElement>("log-download");
+const diagnosticsDownload = byId<HTMLAnchorElement>("diagnostics-download");
+const resultsLogLink = byId<HTMLAnchorElement>("results-log-link");
+const resultsDiagnosticsLink = byId<HTMLAnchorElement>("results-diagnostics-link");
+const pushLogLink = byId<HTMLAnchorElement>("push-log-link");
+const pushDiagnosticsLink = byId<HTMLAnchorElement>("push-diagnostics-link");
 const resultsSection = byId("results-section");
 const summaryText = byId("summary");
 const filterType = byId<HTMLSelectElement>("filter-type");
 const filterPbi = byId<HTMLSelectElement>("filter-pbi");
 const filterText = byId<HTMLInputElement>("filter-text");
+const filterRegression = byId<HTMLInputElement>("filter-regression");
+const filterRegressionCount = byId("filter-regression-count");
 const testCasesBox = byId("testcases");
 const downloadLink = byId<HTMLAnchorElement>("download-link");
 const uploadInput = byId<HTMLInputElement>("upload-input");
@@ -169,9 +193,63 @@ let currentSource: Source = "original";
 let stream: EventSource | null = null;
 
 // ---------- small helpers ----------
-const showError = (message: string | null): void => {
+// The error box sits next to the controls that caused it: under Generate for a run, under Push for the review.
+type ErrorPlace = "generate" | "review";
+const errorSlots: Record<ErrorPlace, HTMLElement> = { generate: byId("error-slot-generate"), review: byId("error-slot-review") };
+
+const placeError = (place: ErrorPlace): void => {
+  if (errorBanner.parentElement !== errorSlots[place]) errorSlots[place].append(errorBanner);
+};
+
+const showError = (message: string | null, place: ErrorPlace = "generate"): void => {
+  placeError(place);
   errorBanner.hidden = message === null;
+  errorBanner.className = "banner banner-error";
   errorBanner.textContent = message ?? "";
+  if (message !== null) {
+    // An error must never sit inside a folded card.
+    if (place === "generate") generateCollapse.open = true;
+    else reviewCollapse.open = true;
+    errorBanner.scrollIntoView({ block: "nearest" });
+  }
+};
+
+const logUrl = (runId: string): string => `/api/runs/${runId}/log?download=1`;
+const diagnosticsUrl = (runId: string): string => `/api/runs/${runId}/diagnostics`;
+
+// A failed run: say what is likely wrong and what to try, keep the raw reason one click away, and offer the log.
+const showFailure = (runId: string, meta: RunMeta, fallback: string, place: ErrorPlace = "generate"): void => {
+  const raw = meta.errorMessage ?? fallback;
+  const hint = meta.errorHint;
+  // Which ids were left out and why, so "not a PBI" names the work item instead of leaving it to guess.
+  const skipped = (meta.skipped ?? []).map((item) => `PBI ${item.id}: ${item.reason}.`).join("\n");
+  const skippedLine = skipped ? [h("p", { class: "error-skipped", "data-testid": "error-skipped" }, skipped)] : [];
+  const body: Node[] = hint
+    ? [
+        h("strong", { class: "error-title", "data-testid": "error-title" }, hint.title),
+        ...skippedLine,
+        h("ul", { class: "error-steps", "data-testid": "error-steps" }, ...hint.steps.map((step) => h("li", {}, step))),
+        h("details", { class: "error-details" }, h("summary", {}, "Technical details"), h("pre", { class: "raw", "data-testid": "error-raw" }, raw)),
+      ]
+    : [...skippedLine, h("p", { "data-testid": "error-raw" }, raw)];
+  body.push(
+    h(
+      "p",
+      { class: "error-links" },
+      "Need help? ",
+      h("a", { href: logUrl(runId), download: "", "data-testid": "error-log-link" }, "Download full log"),
+      " · ",
+      h("a", { href: diagnosticsUrl(runId), download: "", "data-testid": "error-diagnostics-link" }, "Download diagnostics"),
+    ),
+  );
+  placeError(place);
+  errorBanner.replaceChildren(...body);
+  // Amber for something to change in what was typed, red for something that broke.
+  errorBanner.className = hint?.tone === "warning" ? "banner banner-warning" : "banner banner-error";
+  errorBanner.hidden = false;
+  if (place === "generate") generateCollapse.open = true;
+  else reviewCollapse.open = true;
+  errorBanner.scrollIntoView({ block: "nearest" });
 };
 
 const setRunning = (running: boolean): void => {
@@ -228,8 +306,14 @@ const createTracker = (bar: HTMLProgressElement, label: HTMLElement, expectedSte
   };
 };
 
-const toOutcome = (status: RunStatus): Exclude<Outcome, "running"> =>
-  status === "done" ? "done" : status === "cancelled" ? "cancelled" : "failed";
+const toOutcome = (meta: RunMeta): Exclude<Outcome, "running"> =>
+  meta.status === "done"
+    ? "done"
+    : meta.status === "cancelled"
+      ? "cancelled"
+      : meta.errorHint?.tone === "warning"
+        ? "stopped"
+        : "failed";
 
 const follow = (
   runId: string,
@@ -291,9 +375,23 @@ const renderTestCase = (testCase: TestCase): HTMLElement => {
       "summary",
       {},
       h("span", { class: "tc-title" }, testCase.title),
-      h("span", { class: "badge" }, testCase.testType),
+      h("span", { class: "badge", "data-type": testCase.testType }, testCase.testType),
+      ...(hasRegressionTag(testCase.tags)
+        ? [
+            h(
+              "span",
+              {
+                class: "badge badge-regression",
+                "data-testid": "regression-badge",
+                // The script the generator says this matches, so a reviewer can check the match.
+                title: matchedScript(testCase.description) ? `Matches ${matchedScript(testCase.description)}` : "Tagged regression",
+              },
+              "regression",
+            ),
+          ]
+        : []),
       h("span", { class: "badge" }, testCase.pbiId === null ? "PBI ?" : `PBI ${testCase.pbiId}`),
-      h("span", { class: "badge" }, `P${testCase.priority}`),
+      h("span", { class: "badge", "data-priority": String(testCase.priority) }, `P${testCase.priority}`),
       h("span", { class: "badge" }, `${testCase.steps.length} ${testCase.steps.length === 1 ? "step" : "steps"}`),
     ),
     h("div", { class: "tc-body" }, details, table),
@@ -307,6 +405,7 @@ const renderList = (): void => {
   const visible = currentTestCases.filter((testCase) => {
     if (type && testCase.testType !== type) return false;
     if (pbi && String(testCase.pbiId) !== pbi) return false;
+    if (filterRegression.checked && !hasRegressionTag(testCase.tags)) return false;
     if (!needle) return true;
     const haystack = [testCase.title, ...testCase.steps.flatMap((step) => [step.action, step.expected])].join(" ").toLowerCase();
     return haystack.includes(needle);
@@ -330,7 +429,13 @@ const describeContextUsed = (used: ContextUsed[]): string => {
   if (used.length === 0) return "Context: none";
   const parts = used.map((entry) => {
     const how =
-      entry.source === "upload" ? `your uploaded file "${entry.label}"` : entry.source === "url" ? `downloaded from ${entry.label}` : entry.label;
+      entry.source === "upload"
+        ? `your uploaded file "${entry.label}"`
+        : entry.source === "paste"
+          ? "your pasted text"
+          : entry.source === "url"
+            ? `downloaded from ${entry.label}`
+            : entry.label;
     return `${KIND_LABELS[entry.kind]} — ${how} (${formatBytes(entry.bytes)})`;
   });
   return `Context: ${parts.join("; ")}`;
@@ -344,9 +449,10 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
   const label = repo.label;
 
   const include = h("input", { type: "checkbox", "data-testid": `ctx-${kind}` });
-  const radio = (value: "repo" | "upload" | "url"): HTMLInputElement =>
+  const radio = (value: "repo" | "paste" | "upload" | "url"): HTMLInputElement =>
     h("input", { type: "radio", name: `ctx-${kind}-source`, value, "data-testid": `ctx-${kind}-${value}` });
   const repoRadio = radio("repo");
+  const pasteRadio = radio("paste");
   const uploadRadio = radio("upload");
   const urlRadio = radio("url");
 
@@ -354,7 +460,23 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     ? `Use ${repo.path} (${formatBytes(repo.bytes)}, updated ${new Date(repo.modifiedAt ?? "").toLocaleDateString()})`
     : `${repo.path} (not found)`;
   repoRadio.disabled = !repo.exists;
-  (repo.exists ? repoRadio : uploadRadio).checked = true;
+  // Pasting is the quickest way to move text out of a wiki, an email or a document, so it is the fallback.
+  (repo.exists ? repoRadio : pasteRadio).checked = true;
+
+  const pasteInfo = h("span", { class: "hint", "data-testid": `ctx-${kind}-paste-info` });
+  const pasteInput = h("textarea", { rows: "8", placeholder: "Paste the text here", "aria-label": `${label} text`, "data-testid": `ctx-${kind}-paste-input` });
+  pasteInput.addEventListener("input", () => {
+    const bytes = new Blob([pasteInput.value]).size;
+    pasteInfo.textContent =
+      bytes === 0 ? "" : bytes > MAX_CONTEXT_BYTES ? `${formatBytes(bytes)} — over the ${MAX_CONTEXT_BYTES / 1024} KB limit. Paste just the relevant section.` : formatBytes(bytes);
+  });
+  const pasteBox = h(
+    "div",
+    { class: "context-input" },
+    pasteInput,
+    h("div", { class: "hint" }, "Copy it from your wiki, an email or a document and paste it here (up to 200 KB). Formatting is dropped; the words are kept."),
+    pasteInfo,
+  );
 
   // A chosen file is read in the browser; the server never receives a path from the page.
   let chosen: { name: string; text: string } | null = null;
@@ -390,6 +512,8 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     { class: "context-options", "data-testid": `ctx-${kind}-options` },
     h("label", {}, repoRadio, ` ${repoText}`),
     ...(preview ? [preview] : []),
+    h("label", {}, pasteRadio, " Paste text"),
+    pasteBox,
     h("label", {}, uploadRadio, " Upload a document"),
     uploadBox,
     h("label", {}, urlRadio, " From a URL"),
@@ -398,11 +522,12 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
 
   const sync = (): void => {
     options.hidden = !include.checked;
+    pasteBox.hidden = !pasteRadio.checked;
     uploadBox.hidden = !uploadRadio.checked;
     urlBox.hidden = !urlRadio.checked;
     if (preview) preview.hidden = !repoRadio.checked;
   };
-  [include, repoRadio, uploadRadio, urlRadio].forEach((control) => control.addEventListener("change", sync));
+  [include, repoRadio, pasteRadio, uploadRadio, urlRadio].forEach((control) => control.addEventListener("change", sync));
   sync();
 
   contextCardsBox.append(h("div", { class: "context-card" }, h("label", { class: "inline" }, include, ` ${label}`), options));
@@ -411,6 +536,12 @@ const buildContextCard = (repo: RepoContext): ContextCard => {
     request: async () => {
       if (!include.checked) return null;
       if (repoRadio.checked) return { kind, source: "repo" };
+      if (pasteRadio.checked) {
+        const text = pasteInput.value;
+        if (!text.trim()) throw new Error(`${label}: paste some text, or choose another source.`);
+        if (new Blob([text]).size > MAX_CONTEXT_BYTES) throw new Error(`${label}: the pasted text is over the ${MAX_CONTEXT_BYTES / 1024} KB limit. Paste just the relevant section.`);
+        return { kind, source: "paste", text };
+      }
       if (urlRadio.checked) {
         const url = urlInput.value.trim();
         if (!url) throw new Error(`${label}: enter a URL, or choose another source.`);
@@ -458,6 +589,7 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
   currentRunId = meta.id;
   currentTestCases = testCases;
   currentSource = source;
+  reviewCollapse.open = true; // new results are always shown, even if the last ones were folded by hand
   renderUpload(meta);
   const steps = testCases.reduce((sum, testCase) => sum + testCase.steps.length, 0);
   const byType = Object.entries(countBy(testCases.map((testCase) => testCase.testType)))
@@ -465,12 +597,20 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
     .join(" · ");
   const extras = [formatDuration(meta.durationMs), formatCost(meta.costUsd)].filter(Boolean).join(" · ");
   contextUsedText.textContent = describeContextUsed(meta.context ?? []);
+  // Ids that were typed but left out (for example a Bug): say so, so nobody thinks they were covered.
+  const skipped = meta.skipped ?? [];
+  skippedBanner.hidden = skipped.length === 0;
+  skippedBanner.textContent = skipped.map((item) => `Skipped PBI ${item.id}: ${item.reason}.`).join("\n");
   const heading = source === "uploaded" ? `Your uploaded file: ${testCases.length} test cases` : `${testCases.length} test cases`;
   summaryText.textContent = [heading, `${steps} steps`, byType, extras].filter(Boolean).join(" — ");
 
   fillSelect(filterType, Object.keys(countBy(testCases.map((testCase) => testCase.testType))));
   fillSelect(filterPbi, Object.keys(countBy(testCases.map((testCase) => String(testCase.pbiId)))));
   filterText.value = "";
+  const regressionCount = testCases.filter((testCase) => hasRegressionTag(testCase.tags)).length;
+  filterRegression.checked = false;
+  filterRegression.disabled = regressionCount === 0; // nothing to filter on when no test case carries the tag
+  filterRegressionCount.textContent = `(${regressionCount})`;
   renderList();
 
   downloadLink.href = `/api/runs/${meta.id}/csv`;
@@ -478,13 +618,30 @@ const renderResults = (meta: RunMeta, testCases: TestCase[], source: Source): vo
   resultsSection.hidden = false;
 };
 
+// Only the end of the log is shown here; the download has all of it.
+const loadLog = async (): Promise<void> => {
+  const runId = currentRunId;
+  if (!runId) return;
+  logView.textContent = "Loading…";
+  try {
+    const response = await fetch(`/api/runs/${runId}/log?tail=300`);
+    if (runId !== currentRunId) return; // another run took over while this was loading
+    logView.textContent = response.ok ? await response.text() : "No log has been saved for this run yet.";
+  } catch {
+    logView.textContent = "The log could not be loaded.";
+  }
+  logView.scrollTop = logView.scrollHeight;
+};
+
 const loadRun = async (runId: string): Promise<RunMeta> => {
   const { meta, testCases, source } = await api<{ meta: RunMeta; testCases: TestCase[]; source: Source | null }>(`/api/runs/${runId}`);
+  resultsLogLink.href = logUrl(runId);
+  resultsDiagnosticsLink.href = diagnosticsUrl(runId);
   if (meta.kind === "generate" && meta.status === "done") {
     renderResults(meta, testCases, source ?? "original");
   } else if (meta.status === "failed" || meta.status === "cancelled") {
     resultsSection.hidden = true;
-    showError(meta.errorMessage ?? `The run ${meta.status}.`);
+    showFailure(runId, meta, `The run ${meta.status}.`);
   }
   return meta;
 };
@@ -505,10 +662,26 @@ const refreshHistory = async (): Promise<void> => {
         });
         item.append(open);
       }
+      // A run that is still going cannot be deleted; the server refuses it too.
+      if (run.status !== "running") {
+        const remove = h("button", { type: "button", class: "icon-button", "aria-label": `Delete run: ${label}`, title: "Delete this run", "data-testid": "delete-run-button" });
+        remove.innerHTML = TRASH_ICON;
+        remove.addEventListener("click", () => {
+          runToDelete = run.id;
+          deleteDialogText.textContent = label;
+          deleteDialogDetail.textContent = describeDeletion(run);
+          deleteDialog.showModal();
+        });
+        item.append(remove);
+      }
       return item;
     }),
   );
-  if (runs.length === 0) historyList.append(h("li", { class: "hint" }, "No runs yet."));
+  if (runs.length === 0) {
+    historyList.append(
+      h("li", { class: "hint empty" }, h("strong", {}, "No runs yet."), h("span", {}, "Enter PBI ids above and click Generate test cases to start.")),
+    );
+  }
 };
 
 // ---------- generate ----------
@@ -540,23 +713,78 @@ const startGenerate = async (): Promise<void> => {
 
 const watchGenerate = async (runId: string, expectedSteps: number | null, startedAtMs: number): Promise<void> => {
   currentRunId = runId;
+  logDownload.href = logUrl(runId);
+  diagnosticsDownload.href = diagnosticsUrl(runId);
+  logView.textContent = "";
   stepsList.replaceChildren();
   notesList.replaceChildren();
   resultsSection.hidden = true;
   pushSection.hidden = true;
   progressSection.hidden = false;
+  progressCollapse.open = true; // a new run shows its progress, even if the last one was folded by hand
   setRunning(true);
   const tracker = createTracker(progressBar, progressLabelEl, expectedSteps, startedAtMs);
   try {
     await follow(runId, stepsList, notesList, (event) => tracker.onStep(event));
     const meta = await loadRun(runId);
-    tracker.finish(toOutcome(meta.status));
+    tracker.finish(toOutcome(meta));
+    if (logDetails.open) void loadLog(); // the viewer was open while the run went on: show the end of it
   } finally {
     tracker.finish("failed"); // no-op when already finished; covers an exception on the way
     setRunning(false);
     void refreshHistory();
   }
 };
+
+// ---------- delete one saved run ----------
+let runToDelete: string | null = null;
+
+// A static icon (the Material "delete" shape), so setting innerHTML here is safe.
+const TRASH_ICON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+
+// Says only what is really deleted: a failed run has no CSV, and the repo's output/ folder is never touched.
+const describeDeletion = (run: RunMeta): string => {
+  const what = run.hasCsv ? (run.upload ? "its CSV, the edited file you uploaded and its log" : "its CSV and its log") : "its log";
+  const kept = run.hasCsv ? " The copy in the repo's output/ folder stays." : "";
+  return `This deletes ${what} from this computer.${kept} Nothing in Azure DevOps is changed.`;
+};
+
+// Deletes the run on the server. If it was the run on screen, the screen goes back to a fresh start.
+const deleteRun = async (id: string): Promise<void> => {
+  await api<{ removed: string }>(`/api/runs/${id}`, { method: "DELETE" });
+  if (id === currentRunId) {
+    stream?.close();
+    currentRunId = null;
+    currentTestCases = [];
+    progressSection.hidden = true;
+    resultsSection.hidden = true;
+    pushSection.hidden = true;
+    stepsList.replaceChildren();
+    notesList.replaceChildren();
+    testCasesBox.replaceChildren();
+    logView.textContent = "";
+  }
+  showError(null);
+  await refreshHistory();
+};
+
+deleteCancelButton.addEventListener("click", () => {
+  runToDelete = null;
+  deleteDialog.close();
+});
+deleteForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const id = runToDelete;
+  runToDelete = null;
+  deleteDialog.close();
+  if (id) void deleteRun(id).catch((error) => showError(errorText(error)));
+});
+
+logDetails.addEventListener("toggle", () => {
+  if (logDetails.open) void loadLog();
+});
+logRefreshButton.addEventListener("click", () => void loadLog());
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -568,7 +796,7 @@ cancelButton.addEventListener("click", () => {
   api(`/api/runs/${currentRunId}/cancel`, { method: "POST", body: {} }).catch((error) => showError(errorText(error)));
 });
 
-[filterType, filterPbi].forEach((control) => control.addEventListener("change", renderList));
+[filterType, filterPbi, filterRegression].forEach((control) => control.addEventListener("change", renderList));
 filterText.addEventListener("input", renderList);
 
 // ---------- upload an edited CSV ----------
@@ -588,7 +816,7 @@ uploadInput.addEventListener("change", () => {
       if (!response.ok) throw new Error((body as { error?: string }).error ?? `Upload failed (${response.status})`);
       await loadRun(runId);
     } catch (error) {
-      showError(errorText(error));
+      showError(errorText(error), "review");
     } finally {
       uploadInput.value = ""; // lets the same file be chosen again after editing it once more
     }
@@ -601,7 +829,7 @@ removeUploadButton.addEventListener("click", () => {
   showError(null);
   api(`/api/runs/${runId}/upload`, { method: "DELETE" })
     .then(() => loadRun(runId))
-    .catch((error) => showError(errorText(error)));
+    .catch((error) => showError(errorText(error), "review"));
 });
 
 // ---------- push ----------
@@ -627,7 +855,7 @@ pushForm.addEventListener("submit", (event) => {
   if (pushConfirmInput.value !== config.project || !currentRunId) return;
   const typedProject = pushConfirmInput.value;
   pushDialog.close();
-  void doPush(currentRunId, typedProject).catch((error) => showError(errorText(error)));
+  void doPush(currentRunId, typedProject).catch((error) => showError(errorText(error), "review"));
 });
 
 const doPush = async (runId: string, typedProject: string): Promise<void> => {
@@ -637,6 +865,8 @@ const doPush = async (runId: string, typedProject: string): Promise<void> => {
     method: "POST",
     body: { confirm: true, expectedCount: currentTestCases.length, project: typedProject },
   });
+  pushLogLink.href = logUrl(pushRunId);
+  pushDiagnosticsLink.href = diagnosticsUrl(pushRunId);
   pushSteps.replaceChildren();
   pushSummary.textContent = "";
   pushRaw.textContent = "";
@@ -646,8 +876,8 @@ const doPush = async (runId: string, typedProject: string): Promise<void> => {
   try {
     await follow(pushRunId, pushSteps, null, (event) => tracker.onStep(event));
     const { meta } = await api<{ meta: RunMeta }>(`/api/runs/${pushRunId}`);
-    tracker.finish(toOutcome(meta.status));
-    if (meta.status !== "done") showError(meta.errorMessage ?? `The push ${meta.status}.`);
+    tracker.finish(toOutcome(meta));
+    if (meta.status !== "done") showFailure(pushRunId, meta, `The push ${meta.status}.`, "review");
     const result = meta.push;
     const pushed = meta.pushSource === "uploaded" ? "Pushed your uploaded file — " : "";
     pushSummary.textContent = result
