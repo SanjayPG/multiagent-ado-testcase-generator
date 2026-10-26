@@ -37,7 +37,11 @@ Parse each AC bullet into testable conditions:
 ### Step 3 — Use context_summary if provided
 If `context_summary` is non-empty:
 - Extract integration points → add to Description (preconditions)
-- Extract existing test names with "Regression:" prefix in Tags
+- Regression scripts: if the summary lists existing regression tests by name, tag a TC `regression` ONLY when
+  it exercises the same scenario as one of them. When you tag it, add one bullet to its Description,
+  `• Matches regression script: <script name, exactly as listed>`, so a reviewer can check the match.
+  If you are not sure, do not tag. A TC is not a regression TC just because it is a login or smoke test.
+  If the summary lists no regression scripts, never use the `regression` tag.
 - Extract system constraints → enrich Step Expected Result with specifics
 - Do NOT request the full files — work only from the summary
 
@@ -52,7 +56,7 @@ Generate more if the AC clearly suggests additional scenarios.
 ### Variant A — With context_summary (context_summary is non-empty)
 Use the context to:
 - Add preconditions based on system dependencies from HLD
-- Tag TCs that correspond to known regression scripts with `regression`
+- Tag TCs that match a named regression script with `regression` and name the script (see Step 3)
 - Enrich step expected results with system-specific detail (e.g. exact error codes from HLD)
 
 ### Variant B — Without context_summary (context_summary is empty string)
@@ -122,7 +126,7 @@ The coordinator uses this array to write the output file.
     "Priority": "1",
     "Description": "• User account exists with email: user@test.com and password: ValidPass1!\n• Account is active and not locked\n• User is on the login page at /login",
     "Test_Data": "email: user@test.com, password: ValidPass1!, endpoint: POST /api/v1/auth/login",
-    "Tags": "positive, auth, login, smoke, regression",
+    "Tags": "positive, auth, login, smoke",
     "PBI_ID": "123",
     "PBI_Title": "User can log in with email and password",
     "Steps": [
@@ -135,6 +139,8 @@ The coordinator uses this array to write the output file.
   }
 ]
 ```
+
+The `regression` tag is not one of the usual tags: use it only under the rule in Step 3.
 
 Leave `TC_ID` as empty string — coordinator assigns it during merge.
 `PBI_ID` and `PBI_Title` must match the inputs passed to you exactly.
