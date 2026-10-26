@@ -160,9 +160,6 @@
       <section class="card" aria-labelledby="history-heading">
         <details class="collapse" data-testid="history-collapse" open>
         <summary data-testid="history-toggle"><h2 id="history-heading">Recent runs</h2></summary>
-        <div class="history-tools">
-          <button type="button" id="clear-runs-button" data-testid="clear-runs-button" class="secondary" hidden>Clear list…</button>
-        </div>
         <ul id="history" class="history" data-testid="history"></ul>
         </details>
       </section>
@@ -181,16 +178,14 @@
       </p>
     </footer>
 
-    <dialog id="clear-dialog" data-testid="clear-dialog" aria-labelledby="clear-dialog-title">
-      <form id="clear-form" method="dialog">
-        <h2 id="clear-dialog-title">Clear the recent runs?</h2>
-        <p data-testid="clear-dialog-text">
-          This deletes every saved run on this computer, with its CSV and its log, and clears the screen. Nothing in Azure
-          DevOps is changed.
-        </p>
+    <dialog id="delete-dialog" data-testid="delete-dialog" aria-labelledby="delete-dialog-title">
+      <form id="delete-form" method="dialog">
+        <h2 id="delete-dialog-title">Delete this run?</h2>
+        <p id="delete-dialog-text" data-testid="delete-dialog-text"></p>
+        <p>This deletes its CSV and its log from this computer. Nothing in Azure DevOps is changed.</p>
         <div class="actions">
-          <button type="submit" id="clear-confirm-button" data-testid="clear-confirm-button" class="danger">Clear runs</button>
-          <button type="button" id="clear-cancel-button" data-testid="clear-cancel-button" class="secondary">Cancel</button>
+          <button type="submit" id="delete-confirm-button" data-testid="delete-confirm-button" class="danger">Delete run</button>
+          <button type="button" id="delete-cancel-button" data-testid="delete-cancel-button" class="secondary">Cancel</button>
         </div>
       </form>
     </dialog>

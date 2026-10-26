@@ -17,13 +17,13 @@ import {
   subscribe,
 } from "./runner.js";
 import {
-  clearRuns,
   effectiveCsv,
   listRuns,
   readCsvText,
   readEvents,
   readLog,
   readMeta,
+  removeRun,
   removeUploadFile,
   saveUpload,
   updateMeta,
@@ -109,10 +109,14 @@ export const buildApp = async (options: { fetchPage?: FetchPage } = {}): Promise
 
   app.get("/api/runs", async () => ({ runs: await listRuns() }));
 
-  // Clears the saved runs from this computer. Nothing in Azure DevOps is touched, and a run in progress is never removed.
-  app.delete("/api/runs", async () => {
-    if (getActiveRunId() !== null) throw new BusyError("Wait for the current run to finish before clearing the list.");
-    return { removed: await clearRuns() };
+  // Deletes one saved run from this computer. Nothing in Azure DevOps is touched, and nothing is deleted while a run is going.
+  app.delete<RunParams>("/api/runs/:id", async (request) => {
+    const { id } = request.params;
+    if (!isRunId(id)) throw new ValidationError("Invalid run id.");
+    if (getActiveRunId() !== null) throw new BusyError("Wait for the current run to finish before deleting a run.");
+    if (!(await readMeta(id))) throw new NotFoundError("Unknown run.");
+    await removeRun(id);
+    return { removed: id };
   });
 
   app.post("/api/runs", async (request, reply) => {

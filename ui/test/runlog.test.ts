@@ -112,47 +112,49 @@ describe("the saved log", () => {
   });
 });
 
-describe("clearing the saved runs", () => {
-  const clear = () => app.inject({ method: "DELETE", url: "/api/runs", headers: HOST });
+describe("deleting one saved run", () => {
+  const remove = (id: string, headers: Record<string, string> = HOST) => app.inject({ method: "DELETE", url: `/api/runs/${id}`, headers });
 
   it("refuses a request from another origin", async () => {
-    const response = await app.inject({ method: "DELETE", url: "/api/runs", headers: { ...HOST, origin: "https://evil.example" } });
+    const response = await remove("run-20260101-abcdef", { ...HOST, origin: "https://evil.example" });
     expect(response.statusCode).toBe(403);
   });
 
-  it("refuses while a run is in progress, and leaves that run alone", async () => {
+  it("refuses while a run is in progress, and leaves it alone", async () => {
     process.env.FAKE_CLAUDE_MODE = "hang";
     const runId = await startRun([2]);
-    const response = await clear();
-    expect(response.statusCode).toBe(409);
+    expect((await remove(runId)).statusCode).toBe(409);
     expect(existsSync(path.join(runsDir, runId))).toBe(true);
 
     await app.inject({ method: "POST", url: `/api/runs/${runId}/cancel`, headers: HOST, payload: {} });
     await waitForStatus(runId, ["cancelled"]);
   });
 
-  it("deletes every saved run and nothing that is not a run", async () => {
-    const first = await startRun([2, 3]);
-    await waitForStatus(first, ["done"]);
-    const second = await startRun([2, 3]);
-    await waitForStatus(second, ["done"]);
+  it("deletes only that run, with its files", async () => {
+    const keep = await startRun([2, 3]);
+    await waitForStatus(keep, ["done"]);
+    const gone = await startRun([2, 3]);
+    await waitForStatus(gone, ["done"]);
     const stray = path.join(runsDir, "Not-A-Run");
     mkdirSync(stray, { recursive: true });
     writeFileSync(path.join(stray, "keep.txt"), "x");
 
-    const response = await clear();
+    const response = await remove(gone);
     expect(response.statusCode).toBe(200);
-    expect(response.json().removed).toBeGreaterThanOrEqual(2);
-    expect((await get("/api/runs")).json().runs).toEqual([]);
-    expect((await get(`/api/runs/${first}`)).statusCode).toBe(404);
-    expect(existsSync(path.join(runsDir, first))).toBe(false);
+    expect(response.json().removed).toBe(gone);
+    expect(existsSync(path.join(runsDir, gone))).toBe(false);
+    expect((await get(`/api/runs/${gone}`)).statusCode).toBe(404);
+    expect((await get(`/api/runs/${keep}`)).statusCode).toBe(200);
     expect(existsSync(path.join(stray, "keep.txt"))).toBe(true);
+    const ids = (await get("/api/runs")).json().runs.map((run: { id: string }) => run.id);
+    expect(ids).toContain(keep);
+    expect(ids).not.toContain(gone);
   });
 
-  it("is fine when there is nothing to clear", async () => {
-    const response = await clear();
-    expect(response.statusCode).toBe(200);
-    expect(response.json().removed).toBe(0);
+  it("says so for a run that does not exist, and refuses a path-like id", async () => {
+    expect((await remove("run-20260101-abcdef")).statusCode).toBe(404);
+    expect((await remove("..%2F..%2Fx")).statusCode).toBe(400);
+    expect((await remove("x")).statusCode).toBe(400);
   });
 });
 

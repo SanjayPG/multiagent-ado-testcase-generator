@@ -402,28 +402,40 @@ test.describe("test case generator UI", () => {
     await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
   });
 
-  test("clears the recent runs after asking, and puts the screen back to a fresh start", async ({ page }) => {
+  test("deletes one run from Recent runs after asking, and keeps the others", async ({ page }) => {
+    // Start from an empty list: it shows at most 20 runs, and earlier tests have left plenty.
+    const { runs } = (await (await page.request.get("/api/runs")).json()) as { runs: Array<{ id: string }> };
+    for (const run of runs) await page.request.delete(`/api/runs/${run.id}`);
+    await generator.goto();
+
     await generator.generateAndWaitForResults();
-    await expect(generator.history.first()).toBeVisible();
+    await expect(generator.history.first()).toContainText("generate · done");
+    const before = await generator.deleteRunButtons.count();
 
-    await generator.clearRunsButton.click();
-    await expect(generator.clearDialog).toBeVisible();
-    await generator.clearCancelButton.click();
-    await expect(generator.clearDialog).toBeHidden();
-    await expect(generator.history.first()).toBeVisible(); // cancelling keeps everything
+    await generator.generate("2, 3"); // a second run; rows are newest first, and a running row has no delete button
+    await expect(generator.deleteRunButtons).toHaveCount(before + 1, { timeout: 20_000 });
+    await expect(generator.cancelButton).toBeHidden();
 
-    await generator.clearRunsButton.click();
-    await generator.clearConfirmButton.click();
-    await expect(page.getByText("No runs yet.")).toBeVisible();
-    await expect(generator.clearRunsButton).toBeHidden();
+    // Cancelling keeps it, and the dialog names the run.
+    await generator.deleteRunButtons.nth(1).click();
+    await expect(generator.deleteDialog).toBeVisible();
+    await expect(generator.deleteDialog).toContainText("generate · done · PBIs 2, 3");
+    await generator.deleteCancelButton.click();
+    await expect(generator.deleteDialog).toBeHidden();
+    await expect(generator.deleteRunButtons).toHaveCount(before + 1);
+
+    // Deleting the older run leaves the newest one, and the Review on screen, alone.
+    await generator.deleteRunButtons.nth(1).click();
+    await generator.deleteConfirmButton.click();
+    await expect(generator.deleteRunButtons).toHaveCount(before);
+    await expect(generator.testCases.first()).toBeVisible();
+
+    // Deleting the run that is on screen puts the screen back to a fresh start.
+    await generator.deleteRunButtons.first().click();
+    await generator.deleteConfirmButton.click();
+    await expect(generator.deleteRunButtons).toHaveCount(before - 1);
     await expect(generator.testCases).toHaveCount(0);
     await expect(generator.progressSection).toBeHidden();
-    await expect(generator.errorBanner).toBeHidden();
-
-    // A new run works as normal afterwards.
-    await generator.generateAndWaitForResults();
-    await expect(generator.history.first()).toBeVisible();
-    await expect(generator.clearRunsButton).toBeVisible();
   });
 
   test("starting a run opens Progress again if it was folded", async () => {

@@ -80,9 +80,9 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
 2. **Watch.** The progress bar counts the steps and shows elapsed time; **Claude's notes** and **Full log**
    show what happened. Only one run at a time. **Cancel run** stops a stuck one. To save scrolling, click
    the title of **Generate**, **Progress**, **Review** or **Recent runs** to fold it, and again to open it.
-   Nothing folds by itself, and new results always open the Review. **Clear list…** under Recent runs
-   deletes every saved run on this computer (each run's CSV and log) and resets the screen, after you
-   confirm. It never touches Azure DevOps, and it is refused while a run is going.
+   Nothing folds by itself, and new results always open the Review. The trash icon at the right of a run
+   in Recent runs deletes that one run (its CSV and log) from this computer, after you confirm. It never
+   touches Azure DevOps, it is refused while a run is going, and if the run was on screen the screen resets.
 3. **Review.** Filter by type, PBI, or text. Download the ADO CSV. If you gave a regression list, test cases
    that match one of its scripts carry a violet **regression** chip (hover it to see which script), and
    **Regression only** shows just those. The match is Claude's judgement from the names you gave it, so

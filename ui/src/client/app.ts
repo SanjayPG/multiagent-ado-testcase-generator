@@ -136,10 +136,10 @@ const cancelButton = byId<HTMLButtonElement>("cancel-button");
 const progressSection = byId("progress-section");
 const generateCollapse = byId<HTMLDetailsElement>("generate-collapse");
 const reviewCollapse = byId<HTMLDetailsElement>("review-collapse");
-const clearRunsButton = byId<HTMLButtonElement>("clear-runs-button");
-const clearDialog = byId<HTMLDialogElement>("clear-dialog");
-const clearForm = byId<HTMLFormElement>("clear-form");
-const clearCancelButton = byId<HTMLButtonElement>("clear-cancel-button");
+const deleteDialog = byId<HTMLDialogElement>("delete-dialog");
+const deleteForm = byId<HTMLFormElement>("delete-form");
+const deleteDialogText = byId("delete-dialog-text");
+const deleteCancelButton = byId<HTMLButtonElement>("delete-cancel-button");
 const progressCollapse = byId<HTMLDetailsElement>("progress-collapse");
 const progressBar = byId<HTMLProgressElement>("progress-bar");
 const progressLabelEl = byId("progress-label");
@@ -661,10 +661,20 @@ const refreshHistory = async (): Promise<void> => {
         });
         item.append(open);
       }
+      // A run that is still going cannot be deleted; the server refuses it too.
+      if (run.status !== "running") {
+        const remove = h("button", { type: "button", class: "icon-button", "aria-label": `Delete run: ${label}`, title: "Delete this run", "data-testid": "delete-run-button" });
+        remove.innerHTML = TRASH_ICON;
+        remove.addEventListener("click", () => {
+          runToDelete = run.id;
+          deleteDialogText.textContent = label;
+          deleteDialog.showModal();
+        });
+        item.append(remove);
+      }
       return item;
     }),
   );
-  clearRunsButton.hidden = runs.length === 0;
   if (runs.length === 0) {
     historyList.append(
       h("li", { class: "hint empty" }, h("strong", {}, "No runs yet."), h("span", {}, "Enter PBI ids above and click Generate test cases to start.")),
@@ -724,30 +734,42 @@ const watchGenerate = async (runId: string, expectedSteps: number | null, starte
   }
 };
 
-// ---------- clear the recent runs ----------
-// Deletes the saved runs on the server, then puts the screen back to how it looks on a fresh start.
-const clearRuns = async (): Promise<void> => {
-  await api<{ removed: number }>("/api/runs", { method: "DELETE" });
-  stream?.close();
-  currentRunId = null;
-  currentTestCases = [];
-  progressSection.hidden = true;
-  resultsSection.hidden = true;
-  pushSection.hidden = true;
-  stepsList.replaceChildren();
-  notesList.replaceChildren();
-  testCasesBox.replaceChildren();
-  logView.textContent = "";
+// ---------- delete one saved run ----------
+let runToDelete: string | null = null;
+
+// A static icon (the Material "delete" shape), so setting innerHTML here is safe.
+const TRASH_ICON =
+  '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>';
+
+// Deletes the run on the server. If it was the run on screen, the screen goes back to a fresh start.
+const deleteRun = async (id: string): Promise<void> => {
+  await api<{ removed: string }>(`/api/runs/${id}`, { method: "DELETE" });
+  if (id === currentRunId) {
+    stream?.close();
+    currentRunId = null;
+    currentTestCases = [];
+    progressSection.hidden = true;
+    resultsSection.hidden = true;
+    pushSection.hidden = true;
+    stepsList.replaceChildren();
+    notesList.replaceChildren();
+    testCasesBox.replaceChildren();
+    logView.textContent = "";
+  }
   showError(null);
   await refreshHistory();
 };
 
-clearRunsButton.addEventListener("click", () => clearDialog.showModal());
-clearCancelButton.addEventListener("click", () => clearDialog.close());
-clearForm.addEventListener("submit", (event) => {
+deleteCancelButton.addEventListener("click", () => {
+  runToDelete = null;
+  deleteDialog.close();
+});
+deleteForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  clearDialog.close();
-  void clearRuns().catch((error) => showError(errorText(error)));
+  const id = runToDelete;
+  runToDelete = null;
+  deleteDialog.close();
+  if (id) void deleteRun(id).catch((error) => showError(errorText(error)));
 });
 
 logDetails.addEventListener("toggle", () => {

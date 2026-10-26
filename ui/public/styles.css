@@ -259,5 +259,6 @@ dialog h2 { margin-top: 0; }
 .filters .check { display: flex; align-items: center; gap: 8px; align-self: end; margin: 0 0 8px; font-weight: 600; }
 .filters .check:has(input:disabled) { opacity: 0.6; }
 
-.history-tools { margin: 0 0 8px; }
-.history-tools button { padding: 4px 12px; font-size: 0.9rem; }
+.icon-button { margin-left: auto; padding: 4px 6px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--muted); line-height: 0; }
+.history button.icon-button { padding: 4px 6px; }
+.icon-button:hover, .icon-button:focus-visible { color: var(--danger); border-color: var(--danger); }

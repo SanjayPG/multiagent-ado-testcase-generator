@@ -167,16 +167,9 @@ export const listRuns = async (limit = 20): Promise<RunMeta[]> => {
     .slice(0, limit);
 };
 
-// Deletes every saved run (its CSV, log and context files). Only folders shaped like a run id are touched.
-export const clearRuns = async (): Promise<number> => {
-  let ids: string[] = [];
-  try {
-    ids = (await readdir(config.dataDir)).filter(isRunId);
-  } catch {
-    return 0;
-  }
-  await Promise.all(ids.map((id) => rm(runDir(id), { recursive: true, force: true, maxRetries: 3, retryDelay: 100 })));
-  return ids.length;
+// Deletes one saved run: its CSV, log and context files. The id is validated by runDir, so only a run folder is touched.
+export const removeRun = async (id: string): Promise<void> => {
+  await rm(runDir(id), { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
 };
 
 export const saveUpload = async (id: string, bytes: Buffer): Promise<void> => {
