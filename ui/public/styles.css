@@ -74,17 +74,25 @@ h1 .accent { color: var(--brand-orange); }
 @keyframes flow-out { to { background-position: 14px 0; } }
 @keyframes flow-in { to { background-position: -14px 0; } }
 @media (prefers-reduced-motion: reduce) { .link .line { animation: none; } }
-.page-footer { max-width: 1120px; margin: 32px auto 0; padding: 20px 16px 32px; border-top: 1px solid var(--border); text-align: center; }
-.footer-links { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 12px 32px; }
+.page-footer { max-width: 1120px; margin: 32px auto 0; padding: 28px 16px 44px; border-top: 1px solid var(--border); text-align: center; }
+.footer-links { margin: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 14px 16px; }
 /* The logos are single-colour masks painted in the link colour, so they stay as quiet as the text around them. */
-.brand-link { display: inline-flex; align-items: center; gap: 10px; color: var(--muted); font-size: 0.9rem; text-decoration: none; }
+/* Two call-to-action pills. The playlist is the primary one, in the header's orange, so it is the first thing the eye finds. */
+.brand-link {
+  display: inline-flex; align-items: center; gap: 10px; padding: 10px 20px;
+  border: 1px solid var(--accent); border-radius: 999px; color: var(--accent);
+  font-size: 1rem; font-weight: 600; text-decoration: none;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+.brand-primary { background: var(--brand-orange); border-color: var(--brand-orange); color: #00093a; box-shadow: 0 2px 12px rgba(255, 106, 0, 0.35); }
 .brand-link .mark { display: inline-block; height: 20px; background-color: currentColor; mask-repeat: no-repeat; mask-position: center; mask-size: contain; -webkit-mask-repeat: no-repeat; -webkit-mask-position: center; -webkit-mask-size: contain; }
 .mark-youtube { aspect-ratio: 248 / 55; mask-image: url("/img/youtube.png"); -webkit-mask-image: url("/img/youtube.png"); }
 .mark-github { height: 24px; aspect-ratio: 477 / 159; mask-image: url("/img/github.png"); -webkit-mask-image: url("/img/github.png"); }
-.brand-link .label { text-decoration: underline; text-underline-offset: 3px; }
+.brand-link .label { text-decoration: none; }
 /* Orange only on hover, and a darker one on white so the text stays readable. */
-.brand-link:hover, .brand-link:focus-visible { color: #a34100; }
-@media (prefers-color-scheme: dark) { .brand-link:hover, .brand-link:focus-visible { color: var(--accent); } }
+.brand-link:hover, .brand-link:focus-visible { background: var(--accent); color: var(--on-accent); transform: translateY(-1px); }
+.brand-primary:hover, .brand-primary:focus-visible { background: #ff8533; border-color: #ff8533; color: #00093a; }
+@media (prefers-reduced-motion: reduce) { .brand-link { transition: none; } .brand-link:hover, .brand-link:focus-visible { transform: none; } }
 .page-header strong { padding: 2px 10px; border-radius: 999px; background: rgba(255, 106, 0, 0.18); color: #ffd2b0; }
 h2 { font-size: 1.15rem; margin: 28px 0 8px; }
 .subtitle { margin: 4px 0 0; color: var(--muted); }
