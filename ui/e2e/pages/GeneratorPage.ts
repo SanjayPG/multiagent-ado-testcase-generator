@@ -34,6 +34,12 @@ export class GeneratorPage {
   readonly uploadWarnings: Locator;
   readonly removeUploadButton: Locator;
   readonly history: Locator;
+  readonly generateCollapse: Locator;
+  readonly generateToggle: Locator;
+  readonly progressCollapse: Locator;
+  readonly progressToggle: Locator;
+  readonly historyCollapse: Locator;
+  readonly historyToggle: Locator;
   readonly notes: Locator;
   readonly logDetails: Locator;
   readonly logView: Locator;
@@ -78,6 +84,12 @@ export class GeneratorPage {
     this.uploadWarnings = page.getByTestId("upload-warnings");
     this.removeUploadButton = page.getByRole("button", { name: /Remove upload/ });
     this.history = page.getByTestId("history-item");
+    this.generateCollapse = page.getByTestId("generate-collapse");
+    this.generateToggle = page.getByTestId("generate-toggle");
+    this.progressCollapse = page.getByTestId("progress-collapse");
+    this.progressToggle = page.getByTestId("progress-toggle");
+    this.historyCollapse = page.getByTestId("history-collapse");
+    this.historyToggle = page.getByTestId("history-toggle");
     this.notes = page.getByTestId("notes").getByRole("listitem");
     this.logDetails = page.getByTestId("log-details");
     this.logView = page.getByTestId("log-view");

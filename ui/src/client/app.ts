@@ -133,6 +133,8 @@ const skippedBanner = byId("skipped");
 const generateButton = byId<HTMLButtonElement>("generate-button");
 const cancelButton = byId<HTMLButtonElement>("cancel-button");
 const progressSection = byId("progress-section");
+const generateCollapse = byId<HTMLDetailsElement>("generate-collapse");
+const progressCollapse = byId<HTMLDetailsElement>("progress-collapse");
 const progressBar = byId<HTMLProgressElement>("progress-bar");
 const progressLabelEl = byId("progress-label");
 const pushProgressBar = byId<HTMLProgressElement>("push-progress-bar");
@@ -195,7 +197,10 @@ const showError = (message: string | null, place: ErrorPlace = "generate"): void
   errorBanner.hidden = message === null;
   errorBanner.className = "banner banner-error";
   errorBanner.textContent = message ?? "";
-  if (message !== null) errorBanner.scrollIntoView({ block: "nearest" });
+  if (message !== null) {
+    if (place === "generate") generateCollapse.open = true; // an error must never sit inside a folded card
+    errorBanner.scrollIntoView({ block: "nearest" });
+  }
 };
 
 const logUrl = (runId: string): string => `/api/runs/${runId}/log?download=1`;
@@ -231,6 +236,7 @@ const showFailure = (runId: string, meta: RunMeta, fallback: string, place: Erro
   // Amber for something to change in what was typed, red for something that broke.
   errorBanner.className = hint?.tone === "warning" ? "banner banner-warning" : "banner banner-error";
   errorBanner.hidden = false;
+  if (place === "generate") generateCollapse.open = true;
   errorBanner.scrollIntoView({ block: "nearest" });
 };
 
@@ -671,6 +677,7 @@ const watchGenerate = async (runId: string, expectedSteps: number | null, starte
   resultsSection.hidden = true;
   pushSection.hidden = true;
   progressSection.hidden = false;
+  progressCollapse.open = true; // a new run shows its progress, even if the last one was folded by hand
   setRunning(true);
   const tracker = createTracker(progressBar, progressLabelEl, expectedSteps, startedAtMs);
   try {

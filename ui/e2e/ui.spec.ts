@@ -330,6 +330,51 @@ test.describe("test case generator UI", () => {
     await expect(generator.errorRaw).toContainText("The id probably does not exist");
   });
 
+  test("folds Generate, Progress and Recent runs by hand, and never folds anything by itself", async () => {
+    // All three start open.
+    await expect(generator.generateCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.historyCollapse).toHaveJSProperty("open", true);
+
+    await generator.generateToggle.click();
+    await expect(generator.pbiInput).toBeHidden();
+    await generator.generateToggle.click();
+    await expect(generator.pbiInput).toBeVisible();
+
+    await generator.generateAndWaitForResults();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    // The run finished and the review is showing, and still nothing has closed on its own.
+    await expect(generator.generateCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.historyCollapse).toHaveJSProperty("open", true);
+
+    await generator.progressToggle.click();
+    await expect(generator.steps.first()).toBeHidden();
+    await expect(generator.summary).toBeVisible(); // the review is not part of Progress
+    await generator.progressToggle.click();
+    await expect(generator.steps.first()).toBeVisible();
+
+    await generator.historyToggle.click();
+    await expect(generator.history.first()).toBeHidden();
+    await generator.historyToggle.click();
+    await expect(generator.history.first()).toBeVisible();
+
+    await generator.generateToggle.click(); // folding Generate leaves the review where it is
+    await expect(generator.pbiInput).toBeHidden();
+    await expect(generator.summary).toBeVisible();
+  });
+
+  test("starting a run opens Progress again if it was folded", async () => {
+    await generator.generateAndWaitForResults();
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+    await generator.progressToggle.click();
+    await expect(generator.progressCollapse).toHaveJSProperty("open", false);
+
+    await generator.generate("2, 3");
+    await expect(generator.progressCollapse).toHaveJSProperty("open", true);
+    await expect(generator.progressLabel).toContainText("Finished in", { timeout: 20_000 });
+  });
+
   test("keeps the line breaks and the table in Claude's notes", async ({ page }) => {
     await generator.generate("99");
     await expect(generator.errorTitle).toBeVisible({ timeout: 20_000 });

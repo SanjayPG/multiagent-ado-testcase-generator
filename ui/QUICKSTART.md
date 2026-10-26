@@ -77,8 +77,10 @@ The terminal prints the address and whether `ADO_PAT_B64`, `ADO_ORG` and `ADO_PR
    URL (public pages only). It is used for this run only, and nothing is loaded unless you choose it.
    Click **Generate test cases**. If an id is not a PBI (a Bug, for example), the message appears right
    under the button and names the id.
-2. **Watch.** The progress bar counts the steps and shows elapsed time; **Run log** shows the raw events.
-   Only one run at a time. **Cancel run** stops a stuck one.
+2. **Watch.** The progress bar counts the steps and shows elapsed time; **Claude's notes** and **Full log**
+   show what happened. Only one run at a time. **Cancel run** stops a stuck one. To save scrolling, click
+   the title of **Generate**, **Progress** or **Recent runs** to fold it, and again to open it. Nothing
+   folds by itself.
 3. **Review.** Filter by type, PBI, or text. Download the ADO CSV.
 4. **Edited the CSV?** Fix it in Excel (save as *CSV UTF-8*, keep each title starting with
    `[TC-<PBI id>-...]`), upload it back, and check **What changed**. The upload is pushed instead of the

@@ -33,7 +33,9 @@
       <div id="env-banner" class="banner banner-warning" role="alert" data-testid="env-banner" hidden></div>
 
       <section class="card" aria-labelledby="generate-heading">
-        <h2 id="generate-heading">1. Generate</h2>
+        <!-- Generate, Progress and Recent runs can be folded by hand; nothing folds by itself. -->
+        <details class="collapse" id="generate-collapse" data-testid="generate-collapse" open>
+        <summary data-testid="generate-toggle"><h2 id="generate-heading">1. Generate</h2></summary>
         <form id="generate-form" autocomplete="off">
           <label for="pbi-input">PBI ids <span class="hint">(comma separated)</span></label>
           <input id="pbi-input" data-testid="pbi-input" type="text" inputmode="numeric" placeholder="e.g. 2, 3" required />
@@ -60,10 +62,12 @@
         <div id="error-slot-generate">
           <div id="error" class="banner banner-error" role="alert" data-testid="error" hidden></div>
         </div>
+        </details>
       </section>
 
       <section class="card" id="progress-section" data-testid="progress-section" aria-labelledby="progress-heading" hidden>
-        <h2 id="progress-heading">Progress</h2>
+        <details class="collapse" id="progress-collapse" data-testid="progress-collapse" open>
+        <summary data-testid="progress-toggle"><h2 id="progress-heading">Progress</h2></summary>
         <div class="progress-row">
           <progress id="progress-bar" data-testid="progress-bar" aria-label="Run progress" max="1"></progress>
           <span id="progress-label" class="progress-label" data-testid="progress-label"></span>
@@ -82,6 +86,7 @@
             <a id="diagnostics-download" data-testid="diagnostics-download" class="button" href="#" download>Download diagnostics</a>
           </div>
           <pre id="log-view" class="raw log-view" data-testid="log-view" tabindex="0"></pre>
+        </details>
         </details>
       </section>
 
@@ -147,8 +152,10 @@
       </section>
 
       <section class="card" aria-labelledby="history-heading">
-        <h2 id="history-heading">Recent runs</h2>
+        <details class="collapse" data-testid="history-collapse" open>
+        <summary data-testid="history-toggle"><h2 id="history-heading">Recent runs</h2></summary>
         <ul id="history" class="history" data-testid="history"></ul>
+        </details>
       </section>
     </main>
 

@@ -239,3 +239,16 @@ dialog h2 { margin-top: 0; }
 #error .error-skipped { margin: 0 0 4px; font-weight: 600; white-space: pre-wrap; }
 .context-input textarea { display: block; resize: vertical; min-height: 8em; line-height: 1.4; }
 #error [data-testid="error-raw"] { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* A card whose title folds it. Native <details>: works with the keyboard and without script. Nothing folds by itself. */
+.collapse > summary { display: flex; align-items: center; justify-content: space-between; margin: 0; color: var(--text); list-style: none; cursor: pointer; }
+.collapse > summary::-webkit-details-marker { display: none; }
+.collapse > summary h2 { margin: 12px 0; }
+.collapse > summary::after {
+  content: ""; flex: none; width: 0.55em; height: 0.55em; margin-right: 6px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform 0.15s;
+}
+.collapse[open] > summary::after { transform: rotate(-135deg); }
+.collapse > summary:hover::after { border-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .collapse > summary::after { transition: none; } }
